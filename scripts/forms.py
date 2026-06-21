@@ -15,7 +15,7 @@ import time
 # Add parent directory to path for imports
 sys.path.insert(0, str(Path(__file__).parent))
 
-from lib.db import (get_connection, check_duplicate_card, insert_card, log_import,
+from lib.db import (get_connection, init_db, check_duplicate_card, insert_card, log_import,
                     insert_inventory, insert_transaction, insert_transaction_item,
                     mark_inventory_disposed, search_owned_inventory,
                     get_inventory_by_id, update_card, update_inventory,
@@ -293,36 +293,26 @@ def get_inventory():
     try:
         conn = get_connection()
         query = """
-            SELECT v.inventory_id, v.status, v.acquisition_date, v.card_id, v.sport, v.year,
-                   v.manufacturer, v.set_name, v.insert_name, v.card_number, v.player_name, v.team,
-                   v.parallel_name, v.is_auto, v.is_relic, v.is_patch, v.is_rookie,
-                   v.is_numbered, v.print_run, v.is_graded, v.grading_company, v.grade,
-                   v.grade_qualifier, v.cost_basis, i.item_price, i.tax_paid, i.shipping_paid,
-                   v.comp_low, v.comp_avg, v.comp_high, v.unrealized_gain_avg, v.inventory_notes
-            FROM v_inventory_detail v
-            JOIN inventory i ON i.inventory_id = v.inventory_id
+            SELECT inventory_id, status, acquisition_date, card_id, sport, year,
+                   manufacturer, set_name, insert_name, card_number, player_name, team,
+                   parallel_name, is_auto, is_relic, is_patch, is_rookie,
+                   is_numbered, print_run, is_graded, grading_company, grade,
+                   grade_qualifier, cost_basis, item_price, tax_paid, shipping_paid,
+                   comp_low, comp_avg, comp_high, unrealized_gain_avg, inventory_notes
+            FROM v_inventory_detail
             WHERE 1=1
         """
         params = []
         if status_filter:
-            query += " AND status = %s"
+            query += " AND status = ?"
             params.append(status_filter)
         query += " ORDER BY player_name, year DESC"
 
-        with conn.cursor(cursor_factory=__import__('psycopg2.extras', fromlist=['RealDictCursor']).RealDictCursor) as cur:
-            cur.execute(query, params)
-            rows = cur.fetchall()
+        cur = conn.cursor()
+        cur.execute(query, params)
+        rows = cur.fetchall()
 
-        def serialize(row):
-            d = dict(row)
-            for k, v in d.items():
-                if hasattr(v, 'isoformat'):
-                    d[k] = v.isoformat()
-                elif v is not None:
-                    d[k] = v
-            return d
-
-        return jsonify([serialize(r) for r in rows])
+        return jsonify([dict(r) for r in rows])
     except Exception as e:
         return jsonify({'error': str(e)}), 500
     finally:
@@ -352,8 +342,7 @@ def health_check():
     conn = None
     try:
         conn = get_connection()
-        with conn.cursor() as cur:
-            cur.execute("SELECT 1")
+        conn.execute("SELECT 1")
         return jsonify({'status': 'healthy', 'database': 'connected'}), 200
     except Exception as e:
         return jsonify({'status': 'unhealthy', 'error': str(e)}), 500
@@ -371,11 +360,13 @@ def internal_error(error):
     return jsonify({'error': 'Internal server error'}), 500
 
 if __name__ == '__main__':
+    init_db()
+
     print("\n" + "="*60)
-    print("Card Inventory Form Server")
+    print("Card Inventory")
     print("="*60)
-    print("Form:   http://localhost:8000/form")
+    print("Open:   http://localhost:8000/form")
     print("Health: http://localhost:8000/api/health")
     print("="*60 + "\n")
-    
+
     app.run(host='0.0.0.0', port=8000, debug=False)
