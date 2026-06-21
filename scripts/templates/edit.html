@@ -39,10 +39,13 @@
                 <h4 class="mb-0">Card Inventory</h4>
                 <small class="opacity-75">Personal sports card collection</small>
             </div>
-            <ul class="nav nav-tabs">
+            <ul class="nav nav-tabs d-flex align-items-center">
                 <li class="nav-item"><a class="nav-link" href="/form">Add Card</a></li>
                 <li class="nav-item"><a class="nav-link" href="/inventory">View Collection</a></li>
                 <li class="nav-item"><a class="nav-link active" href="#">Edit Entry</a></li>
+                <li class="nav-item ms-auto d-flex align-items-center pe-1">
+                    <button onclick="quitApp()" class="btn btn-sm btn-outline-light opacity-75">Quit</button>
+                </li>
             </ul>
         </div>
 
@@ -444,6 +447,12 @@
     }
 
     loadCard();
+
+    async function quitApp() {
+        if (!confirm('Quit Card Inventory?')) return;
+        await fetch('/api/quit', { method: 'POST' });
+        document.body.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100vh;font-family:sans-serif;color:#666"><p>Card Inventory has stopped. You can close this tab.</p></div>';
+    }
 </script>
 </body>
 </html>

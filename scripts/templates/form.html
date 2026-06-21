@@ -137,6 +137,9 @@
                             View Collection
                         </a>
                     </li>
+                    <li class="nav-item ms-auto d-flex align-items-center pe-1">
+                        <button onclick="quitApp()" class="btn btn-sm btn-outline-light opacity-75">Quit</button>
+                    </li>
                 </ul>
             </div>
             <div class="card-body p-4">
@@ -650,6 +653,12 @@
                 hideTradeResults();
             }
         });
+
+        async function quitApp() {
+            if (!confirm('Quit Card Inventory?')) return;
+            await fetch('/api/quit', { method: 'POST' });
+            document.body.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100vh;font-family:sans-serif;color:#666"><p>Card Inventory has stopped. You can close this tab.</p></div>';
+        }
     </script>
 </body>
 </html>

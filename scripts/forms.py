@@ -10,6 +10,7 @@ Usage:
 from flask import Flask, render_template, request, jsonify, send_from_directory
 import sys
 import os
+import threading
 from pathlib import Path
 import time
 
@@ -397,6 +398,16 @@ def health_check():
         return jsonify({'status': 'unhealthy', 'error': str(e)}), 500
     finally:
         close_connection(conn)
+
+@app.route('/api/quit', methods=['POST'])
+def quit_app():
+    """Shut down the server cleanly from the browser."""
+    def _stop():
+        time.sleep(0.5)
+        os._exit(0)
+    threading.Thread(target=_stop, daemon=True).start()
+    return jsonify({'status': 'shutting down'})
+
 
 @app.errorhandler(404)
 def not_found(error):
