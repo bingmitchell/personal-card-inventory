@@ -145,6 +145,108 @@ def log_import(conn, import_method, file_name=None, record_count=0,
         conn.rollback()
         raise Exception(f"Import logging failed: {e}")
 
+def search_owned_inventory(conn, query, limit=25):
+    """Search owned (non-traded, non-sold) inventory by player, set, year, or manufacturer."""
+    sql = """
+    SELECT i.inventory_id, c.card_id, c.player_name, c.year, c.manufacturer,
+           c.set_name, c.card_number, c.parallel_name, c.is_auto, c.is_relic,
+           c.is_rookie, c.print_run, i.is_graded, i.grading_company, i.grade
+    FROM inventory i
+    JOIN cards c ON c.card_id = i.card_id
+    WHERE i.status = 'OWNED'
+      AND (i.deleted_at IS NULL)
+      AND (c.deleted_at IS NULL)
+      AND c.is_test = false
+      AND (
+          c.player_name ILIKE %s OR
+          c.set_name    ILIKE %s OR
+          c.manufacturer ILIKE %s OR
+          CAST(c.year AS TEXT) LIKE %s
+      )
+    ORDER BY c.player_name, c.year DESC
+    LIMIT %s
+    """
+    pattern = f'%{query}%'
+    try:
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute(sql, (pattern, pattern, pattern, pattern, limit))
+            return [dict(r) for r in cur.fetchall()]
+    except Exception as e:
+        raise Exception(f"Inventory search failed: {e}")
+
+
+def mark_inventory_disposed(conn, inventory_ids, transaction_id):
+    """Mark cards as TRADED and insert disposed transaction items. Caller must commit."""
+    if not inventory_ids:
+        return
+    try:
+        with conn.cursor() as cur:
+            cur.execute(
+                "UPDATE inventory SET status = 'TRADED', updated_at = NOW() "
+                "WHERE inventory_id = ANY(%s) AND status = 'OWNED'",
+                (inventory_ids,)
+            )
+            cur.executemany(
+                "INSERT INTO transaction_items (transaction_id, inventory_id, direction) "
+                "VALUES (%s, %s, 'disposed')",
+                [(transaction_id, iid) for iid in inventory_ids]
+            )
+    except Exception as e:
+        raise Exception(f"Mark disposed failed: {e}")
+
+
+def insert_inventory(conn, card_id, cost_basis=None, comp_low=None, comp_avg=None,
+                     comp_high=None, acquisition_date=None):
+    """Insert a personal inventory record. Does NOT commit — caller must commit."""
+    comp_updated_at = datetime.now() if any(v is not None for v in [comp_low, comp_avg, comp_high]) else None
+    query = """
+    INSERT INTO inventory (card_id, cost_basis, comp_low, comp_avg, comp_high,
+                           acquisition_date, comp_updated_at)
+    VALUES (%s, %s, %s, %s, %s, %s, %s)
+    RETURNING inventory_id
+    """
+    try:
+        with conn.cursor() as cur:
+            cur.execute(query, (card_id, cost_basis, comp_low, comp_avg, comp_high,
+                                acquisition_date, comp_updated_at))
+            return cur.fetchone()[0]
+    except Exception as e:
+        raise Exception(f"Inventory insert failed: {e}")
+
+
+def insert_transaction(conn, transaction_type, transaction_date, counterparty=None,
+                       venue=None, cash_component=0, total_price=None, notes=None):
+    """Insert a transaction header. Does NOT commit — caller must commit."""
+    query = """
+    INSERT INTO transactions (transaction_type, transaction_date, counterparty, venue,
+                              cash_component, total_price, notes)
+    VALUES (%s, %s, %s, %s, %s, %s, %s)
+    RETURNING transaction_id
+    """
+    try:
+        with conn.cursor() as cur:
+            cur.execute(query, (transaction_type, transaction_date, counterparty, venue,
+                                cash_component or 0, total_price, notes))
+            return cur.fetchone()[0]
+    except Exception as e:
+        raise Exception(f"Transaction insert failed: {e}")
+
+
+def insert_transaction_item(conn, transaction_id, inventory_id, direction, item_price=None):
+    """Insert a transaction line item. Does NOT commit — caller must commit."""
+    query = """
+    INSERT INTO transaction_items (transaction_id, inventory_id, direction, item_price)
+    VALUES (%s, %s, %s, %s)
+    RETURNING item_id
+    """
+    try:
+        with conn.cursor() as cur:
+            cur.execute(query, (transaction_id, inventory_id, direction, item_price))
+            return cur.fetchone()[0]
+    except Exception as e:
+        raise Exception(f"Transaction item insert failed: {e}")
+
+
 def close_connection(conn):
     """Close database connection safely."""
     try:

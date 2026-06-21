@@ -74,6 +74,36 @@
             margin-bottom: 0;
             padding-bottom: 0;
         }
+        .trade-result-item {
+            padding: 8px 12px;
+            cursor: pointer;
+            font-size: 0.875rem;
+            border-bottom: 1px solid #f0f0f0;
+        }
+        .trade-result-item:hover { background-color: #f0f4ff; }
+        .trade-result-item:last-child { border-bottom: none; }
+        .trade-chip {
+            display: inline-flex;
+            align-items: center;
+            background: #667eea;
+            color: white;
+            border-radius: 20px;
+            padding: 4px 12px;
+            font-size: 0.8rem;
+            margin: 3px 3px 3px 0;
+        }
+        .trade-chip button {
+            background: none;
+            border: none;
+            color: white;
+            margin-left: 6px;
+            padding: 0;
+            font-size: 1rem;
+            line-height: 1;
+            cursor: pointer;
+            opacity: 0.8;
+        }
+        .trade-chip button:hover { opacity: 1; }
         .section-title {
             font-weight: 600;
             color: #667eea;
@@ -219,11 +249,117 @@
                         </div>
                     </div>
 
+                    <!-- Acquisition -->
+                    <div class="form-section">
+                        <h6 class="section-title">Acquisition</h6>
+
+                        <div class="mb-3">
+                            <label class="form-label">How did you acquire this card?</label>
+                            <div class="btn-group w-100" role="group">
+                                <input type="radio" class="btn-check" name="acquisition_type" id="typePurchase" value="PURCHASE" onchange="onAcquisitionTypeChange()">
+                                <label class="btn btn-outline-primary" for="typePurchase">Purchase</label>
+                                <input type="radio" class="btn-check" name="acquisition_type" id="typeTrade" value="TRADE" onchange="onAcquisitionTypeChange()">
+                                <label class="btn btn-outline-primary" for="typeTrade">Trade</label>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="acquisitionDate" class="form-label">Date</label>
+                                    <input type="date" class="form-control" id="acquisitionDate" name="acquisition_date">
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="venue" class="form-label">Venue</label>
+                                    <select class="form-select" id="venue" name="venue">
+                                        <option value="">-- Select --</option>
+                                        <option value="eBay">eBay</option>
+                                        <option value="COMC">COMC</option>
+                                        <option value="Card Show">Card Show</option>
+                                        <option value="LCS">LCS (Local Card Shop)</option>
+                                        <option value="Facebook">Facebook Group</option>
+                                        <option value="Personal">Personal</option>
+                                        <option value="Other">Other</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="counterparty" class="form-label" id="counterpartyLabel">From</label>
+                            <input type="text" class="form-control" id="counterparty" name="counterparty"
+                                   placeholder="Seller / trader name">
+                        </div>
+
+                        <!-- Purchase: amount paid -->
+                        <div class="mb-3" id="purchaseFields" style="display:none">
+                            <label for="costBasis" class="form-label">Amount Paid ($)</label>
+                            <input type="number" class="form-control" id="costBasis" name="cost_basis"
+                                   min="0" step="0.01" placeholder="0.00">
+                        </div>
+
+                        <!-- Trade: card picker + cash component -->
+                        <div id="tradeFields" style="display:none">
+                            <div class="mb-3">
+                                <label class="form-label">Cards You Traded Away</label>
+                                <div class="position-relative">
+                                    <input type="text" class="form-control" id="tradeSearch"
+                                           placeholder="Search your inventory by player, set, year..."
+                                           oninput="onTradeSearch(this.value)"
+                                           autocomplete="off">
+                                    <div id="tradeSearchResults"
+                                         class="position-absolute w-100 bg-white border rounded-bottom shadow-sm"
+                                         style="display:none; z-index:200; max-height:220px; overflow-y:auto; top:100%"></div>
+                                </div>
+                                <div id="selectedTradeCards" class="mt-2">
+                                    <p class="text-muted small mb-0">No cards selected yet.</p>
+                                </div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="cashComponent" class="form-label">Cash Component ($) <small class="text-muted">optional</small></label>
+                                <small class="text-muted d-block" style="font-size:0.75rem">Negative = you paid extra cash &nbsp;|&nbsp; Positive = you received extra cash</small>
+                                <input type="number" class="form-control" id="cashComponent" name="cash_component"
+                                       step="0.01" placeholder="0.00">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Comparable Sales -->
+                    <div class="form-section">
+                        <h6 class="section-title">Comparable Sales</h6>
+                        <div class="row">
+                            <div class="col-md-4">
+                                <div class="mb-3">
+                                    <label for="compLow" class="form-label">Low ($)</label>
+                                    <input type="number" class="form-control" id="compLow" name="comp_low"
+                                           min="0" step="0.01" placeholder="0.00">
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="mb-3">
+                                    <label for="compAvg" class="form-label">Avg ($)</label>
+                                    <input type="number" class="form-control" id="compAvg" name="comp_avg"
+                                           min="0" step="0.01" placeholder="0.00">
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="mb-3">
+                                    <label for="compHigh" class="form-label">High ($)</label>
+                                    <input type="number" class="form-control" id="compHigh" name="comp_high"
+                                           min="0" step="0.01" placeholder="0.00">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
                     <!-- Notes -->
                     <div class="form-section">
                         <div class="mb-3">
                             <label for="notes" class="form-label">Notes</label>
-                            <textarea class="form-control" id="notes" name="notes" rows="3" 
+                            <textarea class="form-control" id="notes" name="notes" rows="3"
                                       placeholder="Any additional notes about this card..."></textarea>
                         </div>
                     </div>
@@ -277,13 +413,27 @@
             }
         }
 
+        function onAcquisitionTypeChange() {
+            const isPurchase = document.getElementById('typePurchase').checked;
+            const isTrade    = document.getElementById('typeTrade').checked;
+            document.getElementById('purchaseFields').style.display = isPurchase ? '' : 'none';
+            document.getElementById('tradeFields').style.display    = isTrade    ? '' : 'none';
+            document.getElementById('counterpartyLabel').textContent = isTrade ? 'With' : 'From';
+        }
+
         async function handleSubmit(event) {
             event.preventDefault();
-            
+
             setSubmitting(true);
-            
-            // Collect form data
+
             const formData = new FormData(document.getElementById('cardForm'));
+
+            const acquisitionType = formData.get('acquisition_type') || null;
+            const isPurchase = acquisitionType === 'PURCHASE';
+            const isTrade    = acquisitionType === 'TRADE';
+
+            const costBasisRaw = isPurchase ? document.getElementById('costBasis').value : null;
+
             const data = {
                 sport: formData.get('sport'),
                 year: parseInt(formData.get('year')),
@@ -298,9 +448,21 @@
                 is_relic: document.getElementById('isRelic').checked,
                 is_patch: document.getElementById('isPatch').checked,
                 is_rookie: document.getElementById('isRookie').checked,
-                is_numbered: false,
                 print_run: formData.get('print_run') ? parseInt(formData.get('print_run')) : null,
-                notes: formData.get('notes') || null
+                notes: formData.get('notes') || null,
+                // Acquisition
+                acquisition_type: acquisitionType,
+                acquisition_date: formData.get('acquisition_date') || null,
+                counterparty: formData.get('counterparty') || null,
+                venue: formData.get('venue') || null,
+                cost_basis: costBasisRaw ? parseFloat(costBasisRaw) : null,
+                cash_component: isTrade && formData.get('cash_component')
+                    ? parseFloat(formData.get('cash_component')) : null,
+                traded_inventory_ids: isTrade ? selectedTradeCards.map(c => c.id) : [],
+                // Comps
+                comp_low:  formData.get('comp_low')  ? parseFloat(formData.get('comp_low'))  : null,
+                comp_avg:  formData.get('comp_avg')  ? parseFloat(formData.get('comp_avg'))  : null,
+                comp_high: formData.get('comp_high') ? parseFloat(formData.get('comp_high')) : null,
             };
 
             try {
@@ -313,11 +475,14 @@
                 const result = await response.json();
 
                 if (response.ok) {
-                    showAlert('success', 
-                        `✅ <strong>Success!</strong> Card added (ID: ${result.card_id})<br>` +
-                        `${result.card_data.player_name} - ${result.card_data.sport.toUpperCase()} ${result.card_data.year}`
+                    showAlert('success',
+                        `✅ <strong>Success!</strong> ${result.card_data.player_name} added<br>` +
+                        `${result.card_data.sport.toUpperCase()} ${result.card_data.year} ${result.card_data.set_name} ` +
+                        `&nbsp;·&nbsp; Card #${result.card_id} &nbsp;·&nbsp; Inventory #${result.inventory_id}`
                     );
                     document.getElementById('cardForm').reset();
+                    selectedTradeCards = [];
+                    renderSelectedCards();
                 } else if (response.status === 409) {
                     showAlert('warning',
                         `⚠️ <strong>Duplicate Card</strong><br>` +
@@ -337,6 +502,92 @@
         // Auto-scroll to alerts
         document.getElementById('alertContainer').addEventListener('shown.bs.alert', () => {
             window.scrollTo({ top: 0, behavior: 'smooth' });
+        });
+
+        // ── Trade card picker ──────────────────────────────────────────
+        let selectedTradeCards = [];
+        let searchDebounce = null;
+
+        function onTradeSearch(value) {
+            clearTimeout(searchDebounce);
+            if (value.length < 2) { hideTradeResults(); return; }
+            searchDebounce = setTimeout(() => fetchTradeResults(value), 280);
+        }
+
+        async function fetchTradeResults(query) {
+            try {
+                const res = await fetch(`/api/inventory/search?q=${encodeURIComponent(query)}`);
+                const cards = await res.json();
+                showTradeResults(cards);
+            } catch (e) {
+                hideTradeResults();
+            }
+        }
+
+        function cardLabel(c) {
+            let label = `${c.year} ${c.manufacturer} ${c.set_name} — ${c.player_name}`;
+            if (c.parallel_name) label += ` (${c.parallel_name})`;
+            if (c.card_number)   label += ` #${c.card_number}`;
+            if (c.is_graded)     label += ` [${c.grading_company} ${c.grade}]`;
+            return label;
+        }
+
+        function showTradeResults(cards) {
+            const box = document.getElementById('tradeSearchResults');
+            if (cards.length === 0) {
+                box.innerHTML = `<div class="trade-result-item text-muted">
+                    No owned cards found.
+                    <a href="/form" target="_blank" onclick="hideTradeResults()">Add that card first</a>,
+                    then search again.
+                </div>`;
+            } else {
+                box.innerHTML = cards.map(c => {
+                    const label = cardLabel(c).replace(/'/g, "\\'");
+                    return `<div class="trade-result-item" onclick="selectTradeCard(${c.inventory_id}, '${label}')">
+                        ${cardLabel(c)}
+                    </div>`;
+                }).join('');
+            }
+            box.style.display = 'block';
+        }
+
+        function hideTradeResults() {
+            document.getElementById('tradeSearchResults').style.display = 'none';
+        }
+
+        function selectTradeCard(inventoryId, label) {
+            if (selectedTradeCards.find(c => c.id === inventoryId)) return;
+            selectedTradeCards.push({ id: inventoryId, label });
+            renderSelectedCards();
+            document.getElementById('tradeSearch').value = '';
+            hideTradeResults();
+        }
+
+        function removeTradeCard(inventoryId) {
+            selectedTradeCards = selectedTradeCards.filter(c => c.id !== inventoryId);
+            renderSelectedCards();
+        }
+
+        function renderSelectedCards() {
+            const container = document.getElementById('selectedTradeCards');
+            if (!container) return;
+            if (selectedTradeCards.length === 0) {
+                container.innerHTML = '<p class="text-muted small mb-0">No cards selected yet.</p>';
+            } else {
+                container.innerHTML = selectedTradeCards.map(c =>
+                    `<span class="trade-chip">
+                        ${c.label}
+                        <button type="button" onclick="removeTradeCard(${c.id})" title="Remove">&times;</button>
+                    </span>`
+                ).join('');
+            }
+        }
+
+        // Close search results when clicking outside
+        document.addEventListener('click', e => {
+            if (!e.target.closest('#tradeSearch') && !e.target.closest('#tradeSearchResults')) {
+                hideTradeResults();
+            }
         });
     </script>
 </body>

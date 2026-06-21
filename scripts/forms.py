@@ -15,7 +15,10 @@ import time
 # Add parent directory to path for imports
 sys.path.insert(0, str(Path(__file__).parent))
 
-from lib.db import get_connection, check_duplicate_card, insert_card, log_import, close_connection
+from lib.db import (get_connection, check_duplicate_card, insert_card, log_import,
+                    insert_inventory, insert_transaction, insert_transaction_item,
+                    mark_inventory_disposed, search_owned_inventory,
+                    close_connection)
 from lib.validators import validate_card_data, ValidationError, VALID_SPORTS
 
 app = Flask(__name__)
@@ -39,70 +42,125 @@ def api_add_card():
         if not data:
             return jsonify({'success': False, 'error': 'No JSON data provided'}), 400
         
-        # Prepare card data
+        def _parse_decimal(val):
+            try:
+                return float(val) if val not in (None, '', 'null') else None
+            except (TypeError, ValueError):
+                return None
+
+        def _s(val):
+            """Safely convert any value to a stripped string; returns '' for None."""
+            return str(val).strip() if val is not None else ''
+
+        # Card catalog fields
         card_data = {
-            'sport': data.get('sport', '').strip(),
-            'year': data.get('year', '').strip(),
-            'manufacturer': data.get('manufacturer', '').strip(),
-            'set_name': data.get('set_name', '').strip(),
-            'player_name': data.get('player_name', '').strip(),
-            'card_number': data.get('card_number', '').strip() or None,
-            'team': data.get('team', '').strip() or None,
-            'parallel_name': data.get('parallel_name', '').strip() or None,
-            'insert_name': data.get('insert_name', '').strip() or None,
+            'sport': _s(data.get('sport')),
+            'year': _s(data.get('year')),
+            'manufacturer': _s(data.get('manufacturer')),
+            'set_name': _s(data.get('set_name')),
+            'player_name': _s(data.get('player_name')),
+            'card_number': _s(data.get('card_number')) or None,
+            'team': _s(data.get('team')) or None,
+            'parallel_name': _s(data.get('parallel_name')) or None,
+            'insert_name': _s(data.get('insert_name')) or None,
             'is_auto': data.get('is_auto', False),
             'is_relic': data.get('is_relic', False),
             'is_patch': data.get('is_patch', False),
             'is_rookie': data.get('is_rookie', False),
-            'is_numbered': data.get('is_numbered', False),
-            'print_run': data.get('print_run', '').strip() or None,
-            'notes': data.get('notes', '').strip() or None,
+            'is_numbered': bool(data.get('print_run')),
+            'print_run': data.get('print_run') or None,
+            'notes': _s(data.get('notes')) or None,
         }
-        
+
+        # Acquisition fields
+        acquisition_type    = (data.get('acquisition_type') or '').strip().upper() or None
+        acquisition_date    = data.get('acquisition_date') or None
+        counterparty        = (data.get('counterparty') or '').strip() or None
+        venue               = (data.get('venue') or '').strip() or None
+        cost_basis          = _parse_decimal(data.get('cost_basis'))
+        cash_component      = _parse_decimal(data.get('cash_component')) or 0
+        traded_inventory_ids = [int(x) for x in (data.get('traded_inventory_ids') or []) if x]
+
+        # Comp values
+        comp_low  = _parse_decimal(data.get('comp_low'))
+        comp_avg  = _parse_decimal(data.get('comp_avg'))
+        comp_high = _parse_decimal(data.get('comp_high'))
+
         # Validate
         try:
             card_data = validate_card_data(card_data)
         except ValidationError as e:
             return jsonify({'success': False, 'error': str(e)}), 400
-        
+
         # Connect to database
         conn = get_connection()
-        
-        # Check for duplicate
+
+        # Check for duplicate card in catalog
         is_duplicate, existing_id = check_duplicate_card(conn, card_data)
         if is_duplicate:
             return jsonify({
                 'success': False,
-                'error': 'Card already exists in inventory',
+                'error': 'Card already exists in catalog',
                 'existing_card_id': existing_id,
                 'duplicate': True
-            }), 409  # Conflict
-        
-        # Insert
+            }), 409
+
         start_time = time.time()
-        card_id = insert_card(conn, card_data, is_test=False)
+
+        is_test = bool(data.get('is_test', False))
+
+        # 1. Insert card into catalog (auto-commits inside insert_card)
+        card_id = insert_card(conn, card_data, is_test=is_test)
+
+        # 2. Insert inventory + transaction atomically
+        try:
+            inventory_id = insert_inventory(
+                conn, card_id,
+                cost_basis=cost_basis,
+                comp_low=comp_low,
+                comp_avg=comp_avg,
+                comp_high=comp_high,
+                acquisition_date=acquisition_date or None,
+            )
+
+            if acquisition_type in ('PURCHASE', 'TRADE'):
+                transaction_id = insert_transaction(
+                    conn,
+                    transaction_type=acquisition_type,
+                    transaction_date=acquisition_date or None,
+                    counterparty=counterparty,
+                    venue=venue,
+                    cash_component=cash_component if acquisition_type == 'TRADE' else 0,
+                    total_price=cost_basis,
+                )
+                insert_transaction_item(
+                    conn, transaction_id, inventory_id,
+                    direction='acquired',
+                    item_price=cost_basis,
+                )
+                if acquisition_type == 'TRADE' and traded_inventory_ids:
+                    mark_inventory_disposed(conn, traded_inventory_ids, transaction_id)
+
+            conn.commit()
+        except Exception:
+            conn.rollback()
+            raise
+
         elapsed = time.time() - start_time
-        
-        # Log import
-        log_import(
-            conn, 
-            'WEB_FORM', 
-            record_count=1, 
-            success_count=1, 
-            error_count=0, 
-            status='SUCCESS',
-            execution_time=int(elapsed)
-        )
-        
+
+        log_import(conn, 'WEB_FORM', record_count=1, success_count=1,
+                   error_count=0, status='SUCCESS', execution_time=int(elapsed))
+
         return jsonify({
             'success': True,
             'message': 'Card added successfully',
             'card_id': card_id,
+            'inventory_id': inventory_id,
             'card_data': {
                 'player_name': card_data['player_name'],
                 'sport': card_data['sport'],
                 'year': card_data['year'],
-                'set_name': card_data['set_name']
+                'set_name': card_data['set_name'],
             }
         }), 201
         
@@ -111,6 +169,23 @@ def api_add_card():
         return jsonify({'success': False, 'error': str(e)}), 500
     finally:
         close_connection(conn)
+
+@app.route('/api/inventory/search', methods=['GET'])
+def inventory_search():
+    """Search owned inventory cards for the trade card picker."""
+    q = request.args.get('q', '').strip()
+    if len(q) < 2:
+        return jsonify([])
+    conn = None
+    try:
+        conn = get_connection()
+        results = search_owned_inventory(conn, q)
+        return jsonify(results)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+    finally:
+        close_connection(conn)
+
 
 @app.route('/api/health', methods=['GET'])
 def health_check():
