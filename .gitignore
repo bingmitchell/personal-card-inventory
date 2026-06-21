@@ -5,3 +5,5 @@
 data/*.db
 __pycache__/
 scripts/lib/__pycache__/
+dist/
+build/

@@ -1,6 +1,7 @@
 # -*- mode: python ; coding: utf-8 -*-
-# Build with: pyinstaller card_inventory.spec
-# Output:     dist/CardInventory  (Mac .app or Windows .exe)
+# Build:   python3 -m PyInstaller card_inventory.spec --noconfirm
+# Output:  dist/Card Inventory.app   (macOS)
+#          dist/CardInventory/       (folder — double-click CardInventory inside)
 
 block_cipher = None
 
@@ -26,27 +27,34 @@ pyz = PYZ(a.pure, a.zipped_data, cipher=block_cipher)
 exe = EXE(
     pyz,
     a.scripts,
-    a.binaries,
-    a.zipfiles,
-    a.datas,
-    [],
+    [],                 # no binaries here — COLLECT handles them (onedir mode)
+    exclude_binaries=True,
     name='CardInventory',
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
     upx=True,
-    upx_exclude=[],
-    runtime_tmpdir=None,
-    console=True,   # flip to False to hide the terminal window once stable
+    console=True,       # set to False to hide the terminal once stable
     disable_windowed_traceback=False,
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
 )
 
-# macOS .app bundle (ignored on Windows)
-app = BUNDLE(
+coll = COLLECT(
     exe,
+    a.binaries,
+    a.zipfiles,
+    a.datas,
+    strip=False,
+    upx=True,
+    upx_exclude=[],
+    name='CardInventory',
+)
+
+# macOS .app bundle wrapping the onedir output
+app = BUNDLE(
+    coll,
     name='Card Inventory.app',
     icon=None,
     bundle_identifier='com.personal.card-inventory',

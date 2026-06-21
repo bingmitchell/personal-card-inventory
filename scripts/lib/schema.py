@@ -1,6 +1,8 @@
 """
-SQLite schema definition. Applied once at startup via init_db().
-All tables use CREATE TABLE IF NOT EXISTS so it's safe to call repeatedly.
+SQLite schema. Applied at startup via init_db().
+TABLES  — CREATE TABLE IF NOT EXISTS (idempotent)
+MIGRATIONS — ALTER TABLE additions for existing databases
+VIEWS   — always dropped and recreated so they stay current
 """
 
 TABLES = [
@@ -52,6 +54,8 @@ TABLES = [
         comp_avg        REAL CHECK(comp_avg >= 0),
         comp_high       REAL CHECK(comp_high >= 0),
         comp_updated_at TEXT,
+        front_image     TEXT,
+        back_image      TEXT,
         notes           TEXT,
         deleted_at      TEXT,
         created_at      TEXT NOT NULL DEFAULT (datetime('now')),
@@ -99,15 +103,28 @@ TABLES = [
     """,
 ]
 
+# Column additions for existing databases that predate a schema change.
+# Each tuple: (table, column_name, column_definition)
+MIGRATIONS = [
+    ("inventory", "item_price",    "REAL CHECK(item_price >= 0)"),
+    ("inventory", "tax_paid",      "REAL CHECK(tax_paid >= 0)"),
+    ("inventory", "shipping_paid", "REAL CHECK(shipping_paid >= 0)"),
+    ("inventory", "front_image",   "TEXT"),
+    ("inventory", "back_image",    "TEXT"),
+]
+
+VIEW_NAMES = ["v_inventory_detail"]
+
 VIEWS = [
     """
-    CREATE VIEW IF NOT EXISTS v_inventory_detail AS
+    CREATE VIEW v_inventory_detail AS
     SELECT
         i.inventory_id, i.card_id, i.status, i.acquisition_date,
         i.location, i.is_graded, i.grading_company, i.grade,
         i.grade_qualifier, i.cert_number,
         i.cost_basis, i.item_price, i.tax_paid, i.shipping_paid,
         i.comp_low, i.comp_avg, i.comp_high, i.comp_updated_at,
+        i.front_image, i.back_image,
         i.notes AS inventory_notes,
         c.sport, c.year, c.manufacturer, c.set_name, c.card_number,
         c.player_name, c.team, c.is_base, c.insert_name, c.parallel_name,

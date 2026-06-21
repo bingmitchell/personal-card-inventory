@@ -7,7 +7,7 @@ import os
 from pathlib import Path
 from datetime import datetime
 
-from .schema import TABLES, VIEWS
+from .schema import TABLES, MIGRATIONS, VIEW_NAMES, VIEWS
 
 
 def _db_path() -> Path:
@@ -19,6 +19,16 @@ def _db_path() -> Path:
     return data_dir / 'card_inventory.db'
 
 
+def _photos_dir() -> Path:
+    env = os.getenv('CARD_PHOTOS_PATH')
+    if env:
+        p = Path(env)
+    else:
+        p = Path.home() / '.card_inventory' / 'photos'
+    p.mkdir(parents=True, exist_ok=True)
+    return p
+
+
 def get_connection() -> sqlite3.Connection:
     conn = sqlite3.connect(str(_db_path()), check_same_thread=False)
     conn.row_factory = sqlite3.Row
@@ -27,11 +37,24 @@ def get_connection() -> sqlite3.Connection:
 
 
 def init_db():
-    """Create all tables and views if they don't exist."""
+    """Create tables, run column migrations, and recreate views."""
     conn = get_connection()
     try:
-        for ddl in TABLES + VIEWS:
+        for ddl in TABLES:
             conn.execute(ddl)
+
+        # Add new columns to existing tables without touching existing data
+        for table, column, col_def in MIGRATIONS:
+            existing = {row[1] for row in conn.execute(f"PRAGMA table_info({table})")}
+            if column not in existing:
+                conn.execute(f"ALTER TABLE {table} ADD COLUMN {column} {col_def}")
+
+        # Always recreate views so they reflect the current schema
+        for name in VIEW_NAMES:
+            conn.execute(f"DROP VIEW IF EXISTS {name}")
+        for ddl in VIEWS:
+            conn.execute(ddl)
+
         conn.commit()
     finally:
         conn.close()
@@ -211,7 +234,9 @@ def get_inventory_by_id(conn, inventory_id):
     SELECT i.inventory_id, i.status, i.acquisition_date, i.location,
            i.is_graded, i.grading_company, i.grade, i.grade_qualifier, i.cert_number,
            i.cost_basis, i.item_price, i.tax_paid, i.shipping_paid,
-           i.comp_low, i.comp_avg, i.comp_high, i.notes AS inventory_notes,
+           i.comp_low, i.comp_avg, i.comp_high,
+           i.front_image, i.back_image,
+           i.notes AS inventory_notes,
            c.card_id, c.sport, c.year, c.manufacturer, c.set_name, c.insert_name,
            c.card_number, c.player_name, c.team, c.parallel_name,
            c.is_base, c.is_auto, c.is_relic, c.is_patch, c.is_rookie,
@@ -297,6 +322,25 @@ def update_inventory(conn, inventory_id, data):
         data.get('inventory_notes'),
         inventory_id,
     ))
+
+
+def update_inventory_photos(conn, inventory_id, front_image=None, back_image=None):
+    """Update photo filenames. Only updates provided sides. Does NOT commit."""
+    fields, params = [], []
+    if front_image is not None:
+        fields.append("front_image = ?")
+        params.append(front_image)
+    if back_image is not None:
+        fields.append("back_image = ?")
+        params.append(back_image)
+    if not fields:
+        return
+    params.append(inventory_id)
+    conn.execute(
+        f"UPDATE inventory SET {', '.join(fields)}, updated_at = datetime('now') "
+        f"WHERE inventory_id = ?",
+        params,
+    )
 
 
 def mark_inventory_disposed(conn, inventory_ids, transaction_id):

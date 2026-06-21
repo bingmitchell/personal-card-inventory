@@ -171,6 +171,7 @@
                 <table class="table table-hover table-bordered align-middle" id="inventoryTable">
                     <thead>
                         <tr>
+                            <th style="width:50px"></th>
                             <th onclick="sortBy('player_name')">Player</th>
                             <th onclick="sortBy('year')">Year</th>
                             <th onclick="sortBy('set_name')">Set</th>
@@ -187,7 +188,7 @@
                         </tr>
                     </thead>
                     <tbody id="tableBody">
-                        <tr><td colspan="12" class="text-center text-muted py-4">Loading…</td></tr>
+                        <tr><td colspan="13" class="text-center text-muted py-4">Loading…</td></tr>
                     </tbody>
                 </table>
             </div>
@@ -281,6 +282,14 @@
 
         tbody.innerHTML = rows.map(r => `
             <tr>
+                <td class="text-center p-1">
+                    ${r.front_image
+                        ? `<a href="/photos/${r.front_image}" target="_blank">
+                             <img src="/photos/${r.front_image}" width="36"
+                                  style="border-radius:4px;object-fit:cover;height:50px;" alt="card">
+                           </a>`
+                        : '<span class="text-muted" style="font-size:1.2rem">📷</span>'}
+                </td>
                 <td><strong>${r.player_name}</strong>${r.team ? `<br><small class="text-muted">${r.team}</small>` : ''}</td>
                 <td>${r.year}</td>
                 <td>${r.manufacturer}<br><small class="text-muted">${r.set_name}</small></td>
@@ -335,7 +344,7 @@
         // update sort indicators
         document.querySelectorAll('thead th').forEach(th => th.classList.remove('sort-asc', 'sort-desc'));
         const ths = document.querySelectorAll('thead th');
-        const cols = ['player_name','year','set_name','card_number',null,null,'grade','cost_basis',null,'unrealized_gain_avg','status','acquisition_date'];
+        const cols = [null,'player_name','year','set_name','card_number',null,null,'grade','cost_basis',null,'unrealized_gain_avg','status','acquisition_date'];
         const idx = cols.indexOf(sortCol);
         if (idx >= 0) ths[idx].classList.add(sortDir === 1 ? 'sort-asc' : 'sort-desc');
     }

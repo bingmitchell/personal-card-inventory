@@ -238,6 +238,35 @@
                     </div>
                 </div>
 
+                <!-- Photos -->
+                <div class="form-section">
+                    <h6 class="section-title">Card Photos</h6>
+                    <div class="row g-3">
+                        <div class="col-6 text-center">
+                            <div class="mb-2" style="height:160px;background:#f8f9fe;border-radius:8px;display:flex;align-items:center;justify-content:center;overflow:hidden;">
+                                <img id="frontImg" src="" alt="Front"
+                                     style="display:none;max-height:160px;max-width:100%;object-fit:contain;">
+                                <span id="frontPlaceholder" class="text-muted small">No front photo</span>
+                            </div>
+                            <label class="form-label fw-500">Front</label>
+                            <input type="file" class="form-control form-control-sm" id="frontFile"
+                                   accept="image/*" onchange="uploadPhoto('front')">
+                            <div id="frontStatus" class="mt-1 small"></div>
+                        </div>
+                        <div class="col-6 text-center">
+                            <div class="mb-2" style="height:160px;background:#f8f9fe;border-radius:8px;display:flex;align-items:center;justify-content:center;overflow:hidden;">
+                                <img id="backImg" src="" alt="Back"
+                                     style="display:none;max-height:160px;max-width:100%;object-fit:contain;">
+                                <span id="backPlaceholder" class="text-muted small">No back photo</span>
+                            </div>
+                            <label class="form-label fw-500">Back</label>
+                            <input type="file" class="form-control form-control-sm" id="backFile"
+                                   accept="image/*" onchange="uploadPhoto('back')">
+                            <div id="backStatus" class="mt-1 small"></div>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Actions -->
                 <div class="d-flex gap-2">
                     <button type="submit" class="btn btn-primary flex-grow-1" id="submitBtn">
@@ -278,6 +307,35 @@
         else { el.value = val ?? ''; }
     }
 
+    function showPhoto(side, filename) {
+        const img = document.getElementById(`${side}Img`);
+        const ph  = document.getElementById(`${side}Placeholder`);
+        img.src = `/photos/${filename}?t=${Date.now()}`;
+        img.style.display = '';
+        ph.style.display  = 'none';
+    }
+
+    async function uploadPhoto(side) {
+        const input = document.getElementById(`${side}File`);
+        const status = document.getElementById(`${side}Status`);
+        if (!input.files[0]) return;
+        status.innerHTML = '<span class="text-muted">Uploading…</span>';
+        const fd = new FormData();
+        fd.append(side, input.files[0]);
+        try {
+            const res = await fetch(`/api/inventory/${INVENTORY_ID}/photos`, { method: 'POST', body: fd });
+            const d = await res.json();
+            if (!res.ok) throw new Error(d.error);
+            const key = `${side}_image`;
+            if (d[key]) {
+                showPhoto(side, d[key]);
+                status.innerHTML = '<span class="text-success">Saved</span>';
+            }
+        } catch (e) {
+            status.innerHTML = `<span class="text-danger">${e.message}</span>`;
+        }
+    }
+
     async function loadCard() {
         try {
             const res = await fetch(`/api/inventory/${INVENTORY_ID}`);
@@ -311,6 +369,9 @@
             fill('comp_avg', d.comp_avg);
             fill('comp_high', d.comp_high);
             fill('inventory_notes', d.inventory_notes);
+
+            if (d.front_image) showPhoto('front', d.front_image);
+            if (d.back_image)  showPhoto('back',  d.back_image);
 
             document.getElementById('loadingState').style.display = 'none';
             document.getElementById('editForm').style.display = '';

@@ -7,22 +7,25 @@ Usage:
   python forms.py
 """
 
-from flask import Flask, render_template, request, jsonify
+from flask import Flask, render_template, request, jsonify, send_from_directory
 import sys
+import os
 from pathlib import Path
 import time
 
-# Add parent directory to path for imports
 sys.path.insert(0, str(Path(__file__).parent))
 
 from lib.db import (get_connection, init_db, check_duplicate_card, insert_card, log_import,
                     insert_inventory, insert_transaction, insert_transaction_item,
                     mark_inventory_disposed, search_owned_inventory,
                     get_inventory_by_id, update_card, update_inventory,
-                    close_connection)
+                    update_inventory_photos, _photos_dir, close_connection)
 from lib.validators import validate_card_data, ValidationError, VALID_SPORTS
 
-app = Flask(__name__)
+# When frozen by PyInstaller, templates live inside sys._MEIPASS
+_BASE_DIR = Path(sys._MEIPASS) if getattr(sys, 'frozen', False) else Path(__file__).parent
+
+app = Flask(__name__, template_folder=str(_BASE_DIR / 'templates'))
 app.config['JSON_SORT_KEYS'] = False
 
 @app.route('/', methods=['GET'])
@@ -334,6 +337,52 @@ def inventory_search():
         return jsonify({'error': str(e)}), 500
     finally:
         close_connection(conn)
+
+
+_ALLOWED_IMAGE_EXTS = {'jpg', 'jpeg', 'png', 'webp', 'gif', 'heic', 'heif'}
+
+@app.route('/api/inventory/<int:inventory_id>/photos', methods=['POST'])
+def upload_photos(inventory_id):
+    conn = None
+    try:
+        conn = get_connection()
+        if not get_inventory_by_id(conn, inventory_id):
+            return jsonify({'error': 'Not found'}), 404
+
+        photos = _photos_dir()
+        updated = {}
+
+        for side in ('front', 'back'):
+            f = request.files.get(side)
+            if not f or not f.filename:
+                continue
+            ext = f.filename.rsplit('.', 1)[-1].lower() if '.' in f.filename else ''
+            if ext not in _ALLOWED_IMAGE_EXTS:
+                return jsonify({'error': f'Unsupported file type: .{ext}'}), 400
+            filename = f'{inventory_id}_{side}.{ext}'
+            f.save(str(photos / filename))
+            updated[f'{side}_image'] = filename
+
+        if updated:
+            update_inventory_photos(conn,
+                                    inventory_id,
+                                    front_image=updated.get('front_image'),
+                                    back_image=updated.get('back_image'))
+            conn.commit()
+
+        return jsonify({'success': True, **updated})
+    except Exception as e:
+        if conn:
+            conn.rollback()
+        return jsonify({'error': str(e)}), 500
+    finally:
+        close_connection(conn)
+
+
+@app.route('/photos/<path:filename>')
+def serve_photo(filename):
+    safe = os.path.basename(filename)
+    return send_from_directory(str(_photos_dir()), safe)
 
 
 @app.route('/api/health', methods=['GET'])
