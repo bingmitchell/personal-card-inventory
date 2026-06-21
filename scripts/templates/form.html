@@ -115,11 +115,29 @@
     </style>
 </head>
 <body>
-    <div class="container mt-5">
+    <div class="container mt-4">
         <div class="card">
-            <div class="card-header">
-                <h2 class="mb-0">➕ Add New Card</h2>
-                <small>Enter card details to add to your inventory</small>
+            <div class="card-header" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 1.25rem 1.5rem 0; border-radius: 12px 12px 0 0;">
+                <div class="d-flex justify-content-between align-items-start mb-2">
+                    <div>
+                        <h4 class="mb-0">Card Inventory</h4>
+                        <small class="opacity-75">Personal sports card collection</small>
+                    </div>
+                </div>
+                <ul class="nav nav-tabs" style="border-bottom: none;">
+                    <li class="nav-item">
+                        <a class="nav-link active" href="/form"
+                           style="color:white; background:rgba(255,255,255,0.2); border:none; border-radius:6px 6px 0 0; font-weight:500; padding: 0.5rem 1.25rem;">
+                            Add Card
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/inventory"
+                           style="color:rgba(255,255,255,0.75); border:none; font-weight:500; padding: 0.5rem 1.25rem;">
+                            View Collection
+                        </a>
+                    </li>
+                </ul>
             </div>
             <div class="card-body p-4">
                 <div id="alertContainer"></div>
@@ -293,11 +311,29 @@
                                    placeholder="Seller / trader name">
                         </div>
 
-                        <!-- Purchase: amount paid -->
-                        <div class="mb-3" id="purchaseFields" style="display:none">
-                            <label for="costBasis" class="form-label">Amount Paid ($)</label>
-                            <input type="number" class="form-control" id="costBasis" name="cost_basis"
-                                   min="0" step="0.01" placeholder="0.00">
+                        <!-- Purchase: itemized cost breakdown -->
+                        <div id="purchaseFields" style="display:none">
+                            <div class="row g-2 mb-2">
+                                <div class="col-md-4">
+                                    <label for="itemPrice" class="form-label">Card Price ($)</label>
+                                    <input type="number" class="form-control" id="itemPrice" name="item_price"
+                                           min="0" step="0.01" placeholder="0.00" oninput="updateCostTotal()">
+                                </div>
+                                <div class="col-md-4">
+                                    <label for="taxPaid" class="form-label">Tax ($)</label>
+                                    <input type="number" class="form-control" id="taxPaid" name="tax_paid"
+                                           min="0" step="0.01" placeholder="0.00" oninput="updateCostTotal()">
+                                </div>
+                                <div class="col-md-4">
+                                    <label for="shippingPaid" class="form-label">Shipping ($)</label>
+                                    <input type="number" class="form-control" id="shippingPaid" name="shipping_paid"
+                                           min="0" step="0.01" placeholder="0.00" oninput="updateCostTotal()">
+                                </div>
+                            </div>
+                            <div class="d-flex justify-content-end">
+                                <span class="text-muted small me-2 align-self-center">Total Cost Basis:</span>
+                                <span id="costTotal" class="fw-bold fs-6" style="color:#667eea">$0.00</span>
+                            </div>
                         </div>
 
                         <!-- Trade: card picker + cash component -->
@@ -330,6 +366,10 @@
                     <!-- Comparable Sales -->
                     <div class="form-section">
                         <h6 class="section-title">Comparable Sales</h6>
+                        <div class="text-muted small mb-2" id="compBaseline" style="display:none">
+                            Baseline from card price: <strong id="compBaselineValue">—</strong>
+                            &nbsp;·&nbsp; Leave comps blank to use this as the value estimate.
+                        </div>
                         <div class="row">
                             <div class="col-md-4">
                                 <div class="mb-3">
@@ -413,6 +453,23 @@
             }
         }
 
+        function updateCostTotal() {
+            const price    = parseFloat(document.getElementById('itemPrice').value)    || 0;
+            const tax      = parseFloat(document.getElementById('taxPaid').value)      || 0;
+            const shipping = parseFloat(document.getElementById('shippingPaid').value) || 0;
+            const total = price + tax + shipping;
+            document.getElementById('costTotal').textContent = '$' + total.toFixed(2);
+
+            const baselineEl = document.getElementById('compBaseline');
+            const baselineVal = document.getElementById('compBaselineValue');
+            if (price > 0) {
+                baselineVal.textContent = '$' + price.toFixed(2);
+                baselineEl.style.display = '';
+            } else {
+                baselineEl.style.display = 'none';
+            }
+        }
+
         function onAcquisitionTypeChange() {
             const isPurchase = document.getElementById('typePurchase').checked;
             const isTrade    = document.getElementById('typeTrade').checked;
@@ -432,7 +489,9 @@
             const isPurchase = acquisitionType === 'PURCHASE';
             const isTrade    = acquisitionType === 'TRADE';
 
-            const costBasisRaw = isPurchase ? document.getElementById('costBasis').value : null;
+            const itemPrice    = isPurchase ? parseFloat(document.getElementById('itemPrice').value)    || null : null;
+            const taxPaid      = isPurchase ? parseFloat(document.getElementById('taxPaid').value)      || null : null;
+            const shippingPaid = isPurchase ? parseFloat(document.getElementById('shippingPaid').value) || null : null;
 
             const data = {
                 sport: formData.get('sport'),
@@ -455,7 +514,9 @@
                 acquisition_date: formData.get('acquisition_date') || null,
                 counterparty: formData.get('counterparty') || null,
                 venue: formData.get('venue') || null,
-                cost_basis: costBasisRaw ? parseFloat(costBasisRaw) : null,
+                item_price:    itemPrice,
+                tax_paid:      taxPaid,
+                shipping_paid: shippingPaid,
                 cash_component: isTrade && formData.get('cash_component')
                     ? parseFloat(formData.get('cash_component')) : null,
                 traded_inventory_ids: isTrade ? selectedTradeCards.map(c => c.id) : [],

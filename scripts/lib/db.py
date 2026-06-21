@@ -175,6 +175,108 @@ def search_owned_inventory(conn, query, limit=25):
         raise Exception(f"Inventory search failed: {e}")
 
 
+def get_inventory_by_id(conn, inventory_id):
+    """Return a single inventory row with full card details for pre-filling the edit form."""
+    query = """
+    SELECT i.inventory_id, i.status, i.acquisition_date, i.location,
+           i.is_graded, i.grading_company, i.grade, i.grade_qualifier, i.cert_number,
+           i.cost_basis, i.item_price, i.tax_paid, i.shipping_paid,
+           i.comp_low, i.comp_avg, i.comp_high, i.notes AS inventory_notes,
+           c.card_id, c.sport, c.year, c.manufacturer, c.set_name, c.insert_name,
+           c.card_number, c.player_name, c.team, c.parallel_name,
+           c.is_base, c.is_auto, c.is_relic, c.is_patch, c.is_rookie,
+           c.is_numbered, c.print_run, c.notes AS card_notes
+    FROM inventory i
+    JOIN cards c ON c.card_id = i.card_id
+    WHERE i.inventory_id = %s
+    """
+    try:
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute(query, (inventory_id,))
+            row = cur.fetchone()
+            return dict(row) if row else None
+    except Exception as e:
+        raise Exception(f"Inventory lookup failed: {e}")
+
+
+def update_card(conn, card_id, data):
+    """Update card catalog fields. Does NOT commit — caller must commit."""
+    query = """
+    UPDATE cards SET
+        sport         = %s,
+        year          = %s,
+        manufacturer  = %s,
+        set_name      = %s,
+        card_number   = %s,
+        player_name   = %s,
+        team          = %s,
+        insert_name   = %s,
+        parallel_name = %s,
+        is_auto       = %s,
+        is_relic      = %s,
+        is_patch      = %s,
+        is_rookie     = %s,
+        is_numbered   = %s,
+        print_run     = %s,
+        notes         = %s,
+        updated_at    = NOW()
+    WHERE card_id = %s
+    """
+    try:
+        with conn.cursor() as cur:
+            cur.execute(query, (
+                data['sport'], data['year'], data['manufacturer'], data['set_name'],
+                data.get('card_number'), data['player_name'], data.get('team'),
+                data.get('insert_name'), data.get('parallel_name'),
+                data.get('is_auto', False), data.get('is_relic', False),
+                data.get('is_patch', False), data.get('is_rookie', False),
+                data.get('is_numbered', False), data.get('print_run'),
+                data.get('card_notes'),
+                card_id
+            ))
+    except Exception as e:
+        raise Exception(f"Card update failed: {e}")
+
+
+def update_inventory(conn, inventory_id, data):
+    """Update inventory fields. Does NOT commit — caller must commit."""
+    from datetime import datetime as _dt
+    comp_updated_at = (
+        _dt.now() if any(data.get(k) is not None for k in ['comp_low', 'comp_avg', 'comp_high'])
+        else None
+    )
+    query = """
+    UPDATE inventory SET
+        status         = %s,
+        acquisition_date = %s,
+        item_price     = %s,
+        tax_paid       = %s,
+        shipping_paid  = %s,
+        cost_basis     = %s,
+        comp_low       = %s,
+        comp_avg       = %s,
+        comp_high      = %s,
+        comp_updated_at = COALESCE(%s, comp_updated_at),
+        notes          = %s,
+        updated_at     = NOW()
+    WHERE inventory_id = %s
+    """
+    try:
+        with conn.cursor() as cur:
+            cur.execute(query, (
+                data.get('status', 'OWNED'),
+                data.get('acquisition_date'),
+                data.get('item_price'), data.get('tax_paid'), data.get('shipping_paid'),
+                data.get('cost_basis'),
+                data.get('comp_low'), data.get('comp_avg'), data.get('comp_high'),
+                comp_updated_at,
+                data.get('inventory_notes'),
+                inventory_id
+            ))
+    except Exception as e:
+        raise Exception(f"Inventory update failed: {e}")
+
+
 def mark_inventory_disposed(conn, inventory_ids, transaction_id):
     """Mark cards as TRADED and insert disposed transaction items. Caller must commit."""
     if not inventory_ids:
@@ -195,20 +297,21 @@ def mark_inventory_disposed(conn, inventory_ids, transaction_id):
         raise Exception(f"Mark disposed failed: {e}")
 
 
-def insert_inventory(conn, card_id, cost_basis=None, comp_low=None, comp_avg=None,
+def insert_inventory(conn, card_id, cost_basis=None, item_price=None, tax_paid=None,
+                     shipping_paid=None, comp_low=None, comp_avg=None,
                      comp_high=None, acquisition_date=None):
     """Insert a personal inventory record. Does NOT commit — caller must commit."""
     comp_updated_at = datetime.now() if any(v is not None for v in [comp_low, comp_avg, comp_high]) else None
     query = """
-    INSERT INTO inventory (card_id, cost_basis, comp_low, comp_avg, comp_high,
-                           acquisition_date, comp_updated_at)
-    VALUES (%s, %s, %s, %s, %s, %s, %s)
+    INSERT INTO inventory (card_id, cost_basis, item_price, tax_paid, shipping_paid,
+                           comp_low, comp_avg, comp_high, acquisition_date, comp_updated_at)
+    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
     RETURNING inventory_id
     """
     try:
         with conn.cursor() as cur:
-            cur.execute(query, (card_id, cost_basis, comp_low, comp_avg, comp_high,
-                                acquisition_date, comp_updated_at))
+            cur.execute(query, (card_id, cost_basis, item_price, tax_paid, shipping_paid,
+                                comp_low, comp_avg, comp_high, acquisition_date, comp_updated_at))
             return cur.fetchone()[0]
     except Exception as e:
         raise Exception(f"Inventory insert failed: {e}")
