@@ -135,9 +135,40 @@ def insert_card(conn, card_data, is_test=False):
         raise Exception(f"Card insert failed: {e}")
 
 
+def get_breaks(conn):
+    """Return all breaks ordered by most recent first."""
+    cur = conn.cursor()
+    cur.execute("SELECT break_id, break_name, box_cost, expected_cards FROM breaks ORDER BY break_id DESC")
+    return [dict(r) for r in cur.fetchall()]
+
+
+def get_or_create_break(conn, break_name, box_cost=None, expected_cards=None):
+    """Find an existing break by name or create a new one. Returns break_id."""
+    cur = conn.cursor()
+    cur.execute("SELECT break_id FROM breaks WHERE break_name = ? LIMIT 1", (break_name,))
+    row = cur.fetchone()
+    if row:
+        # Update cost/count if provided
+        if box_cost is not None or expected_cards is not None:
+            conn.execute(
+                "UPDATE breaks SET box_cost = COALESCE(?, box_cost), "
+                "expected_cards = COALESCE(?, expected_cards) WHERE break_id = ?",
+                (box_cost, expected_cards, row[0]),
+            )
+        return row[0]
+    cur.execute(
+        "INSERT INTO breaks (break_name, box_cost, expected_cards) VALUES (?,?,?)",
+        (break_name, box_cost, expected_cards),
+    )
+    return cur.lastrowid
+
+
 def insert_inventory(conn, card_id, cost_basis=None, item_price=None, tax_paid=None,
                      shipping_paid=None, comp_low=None, comp_avg=None,
-                     comp_high=None, acquisition_date=None):
+                     comp_high=None, acquisition_date=None,
+                     is_graded=False, grading_company=None, grade=None,
+                     grade_qualifier=None, cert_number=None, grading_cost=None,
+                     break_id=None):
     """Insert inventory record. Does NOT commit — caller must commit."""
     comp_updated_at = (
         datetime.now().isoformat()
@@ -146,12 +177,16 @@ def insert_inventory(conn, card_id, cost_basis=None, item_price=None, tax_paid=N
     )
     query = """
     INSERT INTO inventory (card_id, cost_basis, item_price, tax_paid, shipping_paid,
-                           comp_low, comp_avg, comp_high, acquisition_date, comp_updated_at)
-    VALUES (?,?,?,?,?,?,?,?,?,?)
+                           comp_low, comp_avg, comp_high, acquisition_date, comp_updated_at,
+                           is_graded, grading_company, grade, grade_qualifier, cert_number,
+                           grading_cost, break_id)
+    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
     """
     cur = conn.cursor()
     cur.execute(query, (card_id, cost_basis, item_price, tax_paid, shipping_paid,
-                        comp_low, comp_avg, comp_high, acquisition_date, comp_updated_at))
+                        comp_low, comp_avg, comp_high, acquisition_date, comp_updated_at,
+                        1 if is_graded else 0, grading_company, grade,
+                        grade_qualifier, cert_number, grading_cost, break_id))
     return cur.lastrowid
 
 
@@ -304,6 +339,12 @@ def update_inventory(conn, inventory_id, data):
         tax_paid         = ?,
         shipping_paid    = ?,
         cost_basis       = ?,
+        is_graded        = ?,
+        grading_company  = ?,
+        grade            = ?,
+        grade_qualifier  = ?,
+        cert_number      = ?,
+        grading_cost     = ?,
         comp_low         = ?,
         comp_avg         = ?,
         comp_high        = ?,
@@ -317,6 +358,10 @@ def update_inventory(conn, inventory_id, data):
         data.get('acquisition_date'),
         data.get('item_price'), data.get('tax_paid'), data.get('shipping_paid'),
         data.get('cost_basis'),
+        1 if data.get('is_graded') else 0,
+        data.get('grading_company'), data.get('grade'),
+        data.get('grade_qualifier'), data.get('cert_number'),
+        data.get('grading_cost'),
         data.get('comp_low'), data.get('comp_avg'), data.get('comp_high'),
         comp_updated_at,
         data.get('inventory_notes'),

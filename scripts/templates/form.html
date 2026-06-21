@@ -270,6 +270,51 @@
                         </div>
                     </div>
 
+                    <!-- Grading -->
+                    <div class="form-section">
+                        <h6 class="section-title">Grading</h6>
+                        <div class="mb-2">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" id="isGraded" onchange="onGradedChange()">
+                                <label class="form-check-label" for="isGraded">This card is graded</label>
+                            </div>
+                        </div>
+                        <div id="gradingFields" style="display:none">
+                            <div class="row g-2 mb-2">
+                                <div class="col-md-4">
+                                    <label class="form-label">Grading Company</label>
+                                    <select class="form-select" id="gradingCompany">
+                                        <option value="">-- Select --</option>
+                                        <option value="PSA">PSA</option>
+                                        <option value="BGS">BGS (Beckett)</option>
+                                        <option value="SGC">SGC</option>
+                                        <option value="CGC">CGC</option>
+                                        <option value="CSG">CSG</option>
+                                        <option value="Other">Other</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">Grade</label>
+                                    <input type="text" class="form-control" id="gradeValue" placeholder="e.g. 10, 9.5">
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">Qualifier</label>
+                                    <input type="text" class="form-control" id="gradeQualifier" placeholder="e.g. OC, MK">
+                                </div>
+                            </div>
+                            <div class="row g-2">
+                                <div class="col-md-6">
+                                    <label class="form-label">Cert / Slab #</label>
+                                    <input type="text" class="form-control" id="certNumber" placeholder="Certification number">
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">Grading Cost ($)</label>
+                                    <input type="number" class="form-control" id="gradingCost" min="0" step="0.01" placeholder="0.00">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
                     <!-- Acquisition -->
                     <div class="form-section">
                         <h6 class="section-title">Acquisition</h6>
@@ -281,6 +326,8 @@
                                 <label class="btn btn-outline-primary" for="typePurchase">Purchase</label>
                                 <input type="radio" class="btn-check" name="acquisition_type" id="typeTrade" value="TRADE" onchange="onAcquisitionTypeChange()">
                                 <label class="btn btn-outline-primary" for="typeTrade">Trade</label>
+                                <input type="radio" class="btn-check" name="acquisition_type" id="typePack" value="PACK" onchange="onAcquisitionTypeChange()">
+                                <label class="btn btn-outline-primary" for="typePack">Pack / Break</label>
                             </div>
                         </div>
 
@@ -362,6 +409,36 @@
                                 <small class="text-muted d-block" style="font-size:0.75rem">Negative = you paid extra cash &nbsp;|&nbsp; Positive = you received extra cash</small>
                                 <input type="number" class="form-control" id="cashComponent" name="cash_component"
                                        step="0.01" placeholder="0.00">
+                            </div>
+                        </div>
+
+                        <!-- Pack/Break: break name, box cost, card count -->
+                        <div id="packBreakFields" style="display:none">
+                            <div class="mb-3">
+                                <label class="form-label">Break Name / Label</label>
+                                <input type="text" class="form-control" id="breakName"
+                                       placeholder="e.g. 2023 Topps Chrome Hobby Box #1"
+                                       list="breakSuggestions">
+                                <datalist id="breakSuggestions"></datalist>
+                                <small class="text-muted">Same name groups cards from the same box — used to split cost</small>
+                            </div>
+                            <div class="row g-2 align-items-end">
+                                <div class="col-md-4">
+                                    <label class="form-label">Box / Pack Cost ($)</label>
+                                    <input type="number" class="form-control" id="breakBoxCost"
+                                           min="0" step="0.01" placeholder="0.00" oninput="updateBreakCost()">
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">Total Cards from Break</label>
+                                    <input type="number" class="form-control" id="breakCardCount"
+                                           min="1" step="1" placeholder="e.g. 10" oninput="updateBreakCost()">
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">Cost per Card</label>
+                                    <input type="text" class="form-control" id="breakCostPerCard"
+                                           readonly style="background:#f0f4ff;font-weight:600;color:#667eea"
+                                           placeholder="—">
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -473,12 +550,34 @@
             }
         }
 
+        function onGradedChange() {
+            const checked = document.getElementById('isGraded').checked;
+            document.getElementById('gradingFields').style.display = checked ? '' : 'none';
+        }
+
         function onAcquisitionTypeChange() {
-            const isPurchase = document.getElementById('typePurchase').checked;
-            const isTrade    = document.getElementById('typeTrade').checked;
-            document.getElementById('purchaseFields').style.display = isPurchase ? '' : 'none';
-            document.getElementById('tradeFields').style.display    = isTrade    ? '' : 'none';
-            document.getElementById('counterpartyLabel').textContent = isTrade ? 'With' : 'From';
+            const type = document.querySelector('[name="acquisition_type"]:checked')?.value || '';
+            document.getElementById('purchaseFields').style.display  = type === 'PURCHASE' ? '' : 'none';
+            document.getElementById('tradeFields').style.display     = type === 'TRADE'    ? '' : 'none';
+            document.getElementById('packBreakFields').style.display = type === 'PACK'     ? '' : 'none';
+            document.getElementById('counterpartyLabel').textContent = type === 'TRADE' ? 'With' : 'From';
+            if (type === 'PACK') loadBreakSuggestions();
+        }
+
+        function updateBreakCost() {
+            const cost  = parseFloat(document.getElementById('breakBoxCost').value) || 0;
+            const count = parseInt(document.getElementById('breakCardCount').value)  || 0;
+            document.getElementById('breakCostPerCard').value =
+                (cost > 0 && count > 0) ? '$' + (cost / count).toFixed(2) : '—';
+        }
+
+        async function loadBreakSuggestions() {
+            try {
+                const res = await fetch('/api/breaks');
+                const breaks = await res.json();
+                const dl = document.getElementById('breakSuggestions');
+                dl.innerHTML = breaks.map(b => `<option value="${b.break_name}">`).join('');
+            } catch (_) {}
         }
 
         async function handleSubmit(event) {
@@ -491,10 +590,13 @@
             const acquisitionType = formData.get('acquisition_type') || null;
             const isPurchase = acquisitionType === 'PURCHASE';
             const isTrade    = acquisitionType === 'TRADE';
+            const isPack     = acquisitionType === 'PACK';
 
             const itemPrice    = isPurchase ? parseFloat(document.getElementById('itemPrice').value)    || null : null;
             const taxPaid      = isPurchase ? parseFloat(document.getElementById('taxPaid').value)      || null : null;
             const shippingPaid = isPurchase ? parseFloat(document.getElementById('shippingPaid').value) || null : null;
+
+            const isGraded = document.getElementById('isGraded').checked;
 
             const data = {
                 sport: formData.get('sport'),
@@ -512,6 +614,13 @@
                 is_rookie: document.getElementById('isRookie').checked,
                 print_run: formData.get('print_run') ? parseInt(formData.get('print_run')) : null,
                 notes: formData.get('notes') || null,
+                // Grading
+                is_graded:       isGraded,
+                grading_company: isGraded ? (document.getElementById('gradingCompany').value || null) : null,
+                grade:           isGraded ? (document.getElementById('gradeValue').value.trim() || null) : null,
+                grade_qualifier: isGraded ? (document.getElementById('gradeQualifier').value.trim() || null) : null,
+                cert_number:     isGraded ? (document.getElementById('certNumber').value.trim() || null) : null,
+                grading_cost:    isGraded ? (parseFloat(document.getElementById('gradingCost').value) || null) : null,
                 // Acquisition
                 acquisition_type: acquisitionType,
                 acquisition_date: formData.get('acquisition_date') || null,
@@ -523,6 +632,10 @@
                 cash_component: isTrade && formData.get('cash_component')
                     ? parseFloat(formData.get('cash_component')) : null,
                 traded_inventory_ids: isTrade ? selectedTradeCards.map(c => c.id) : [],
+                // Pack/Break
+                break_name:       isPack ? (document.getElementById('breakName').value.trim() || null) : null,
+                break_box_cost:   isPack ? (parseFloat(document.getElementById('breakBoxCost').value) || null) : null,
+                break_card_count: isPack ? (parseInt(document.getElementById('breakCardCount').value) || null) : null,
                 // Comps
                 comp_low:  formData.get('comp_low')  ? parseFloat(formData.get('comp_low'))  : null,
                 comp_avg:  formData.get('comp_avg')  ? parseFloat(formData.get('comp_avg'))  : null,
@@ -659,6 +772,9 @@
             await fetch('/api/quit', { method: 'POST' });
             document.body.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100vh;font-family:sans-serif;color:#666"><p>Card Inventory has stopped. You can close this tab.</p></div>';
         }
+
+        // Keep server alive; shuts down ~20 seconds after all tabs close
+        setInterval(() => fetch('/api/ping', {method:'POST', keepalive:true}).catch(()=>{}), 8000);
     </script>
 </body>
 </html>

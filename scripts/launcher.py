@@ -45,6 +45,7 @@ def _wait_and_open():
 
 
 if __name__ == '__main__':
+    os.environ['CARD_WATCHDOG'] = '1'
     from lib.db import init_db
     from forms import app
 

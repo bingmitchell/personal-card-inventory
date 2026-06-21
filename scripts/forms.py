@@ -20,7 +20,8 @@ from lib.db import (get_connection, init_db, check_duplicate_card, insert_card, 
                     insert_inventory, insert_transaction, insert_transaction_item,
                     mark_inventory_disposed, search_owned_inventory,
                     get_inventory_by_id, update_card, update_inventory,
-                    update_inventory_photos, _photos_dir, close_connection)
+                    update_inventory_photos, _photos_dir, close_connection,
+                    get_breaks, get_or_create_break)
 from lib.validators import validate_card_data, ValidationError, VALID_SPORTS
 
 # When frozen by PyInstaller, templates live inside sys._MEIPASS
@@ -28,6 +29,29 @@ _BASE_DIR = Path(sys._MEIPASS) if getattr(sys, 'frozen', False) else Path(__file
 
 app = Flask(__name__, template_folder=str(_BASE_DIR / 'templates'))
 app.config['JSON_SORT_KEYS'] = False
+
+# ── Heartbeat watchdog ─────────────────────────────────────────────────────
+# Browser pages ping /api/ping every 8 seconds. If all tabs are closed the
+# pings stop; after 20 seconds without one the server exits automatically.
+_last_ping = time.time()
+
+@app.route('/api/ping', methods=['POST'])
+def ping():
+    global _last_ping
+    _last_ping = time.time()
+    return '', 204
+
+def _start_watchdog():
+    def _watch():
+        while True:
+            time.sleep(10)
+            if time.time() - _last_ping > 20:
+                os._exit(0)
+    threading.Thread(target=_watch, daemon=True).start()
+
+if os.getenv('CARD_WATCHDOG'):
+    _start_watchdog()
+# ───────────────────────────────────────────────────────────────────────────
 
 @app.route('/', methods=['GET'])
 @app.route('/form', methods=['GET'])
@@ -85,13 +109,20 @@ def api_add_card():
         item_price    = _parse_decimal(data.get('item_price'))
         tax_paid      = _parse_decimal(data.get('tax_paid'))
         shipping_paid = _parse_decimal(data.get('shipping_paid'))
-        # cost_basis = sum of breakdown if provided, else fall back to a direct total field
         if any(v is not None for v in [item_price, tax_paid, shipping_paid]):
             cost_basis = (item_price or 0) + (tax_paid or 0) + (shipping_paid or 0)
         else:
             cost_basis = _parse_decimal(data.get('cost_basis'))
         cash_component      = _parse_decimal(data.get('cash_component')) or 0
         traded_inventory_ids = [int(x) for x in (data.get('traded_inventory_ids') or []) if x]
+
+        # Grading fields
+        is_graded       = bool(data.get('is_graded', False))
+        grading_company = _s(data.get('grading_company')) or None
+        grade           = _s(data.get('grade')) or None
+        grade_qualifier = _s(data.get('grade_qualifier')) or None
+        cert_number     = _s(data.get('cert_number')) or None
+        grading_cost    = _parse_decimal(data.get('grading_cost'))
 
         # Comp values
         comp_low  = _parse_decimal(data.get('comp_low'))
@@ -120,6 +151,21 @@ def api_add_card():
         start_time = time.time()
 
         is_test = bool(data.get('is_test', False))
+        is_pack = acquisition_type == 'PACK'
+
+        # For pack/break: resolve or create the break record and compute per-card cost
+        break_id = None
+        if is_pack:
+            break_name     = _s(data.get('break_name')) or None
+            break_box_cost = _parse_decimal(data.get('break_box_cost'))
+            break_card_count = int(data.get('break_card_count') or 0) or None
+            if break_name:
+                break_id = get_or_create_break(
+                    conn, break_name, break_box_cost, break_card_count
+                )
+            if break_box_cost and break_card_count:
+                item_price = round(break_box_cost / break_card_count, 2)
+                cost_basis = item_price
 
         # 1. Insert card into catalog (auto-commits inside insert_card)
         card_id = insert_card(conn, card_data, is_test=is_test)
@@ -130,18 +176,27 @@ def api_add_card():
                 conn, card_id,
                 cost_basis=cost_basis,
                 item_price=item_price,
-                tax_paid=tax_paid,
-                shipping_paid=shipping_paid,
+                tax_paid=tax_paid if not is_pack else None,
+                shipping_paid=shipping_paid if not is_pack else None,
                 comp_low=comp_low,
                 comp_avg=comp_avg,
                 comp_high=comp_high,
                 acquisition_date=acquisition_date or None,
+                is_graded=is_graded,
+                grading_company=grading_company,
+                grade=grade,
+                grade_qualifier=grade_qualifier,
+                cert_number=cert_number,
+                grading_cost=grading_cost,
+                break_id=break_id,
             )
 
-            if acquisition_type in ('PURCHASE', 'TRADE'):
+            # PACK maps to PURCHASE for the transaction log
+            tx_type = 'TRADE' if acquisition_type == 'TRADE' else 'PURCHASE'
+            if acquisition_type in ('PURCHASE', 'TRADE', 'PACK'):
                 transaction_id = insert_transaction(
                     conn,
-                    transaction_type=acquisition_type,
+                    transaction_type=tx_type,
                     transaction_date=acquisition_date or None,
                     counterparty=counterparty,
                     venue=venue,
@@ -259,6 +314,12 @@ def update_inventory_entry(inventory_id):
             'tax_paid':        tax_paid,
             'shipping_paid':   shipping_paid,
             'cost_basis':      cost_basis,
+            'is_graded':       bool(data.get('is_graded', False)),
+            'grading_company': _s(data.get('grading_company')) or None,
+            'grade':           _s(data.get('grade')) or None,
+            'grade_qualifier': _s(data.get('grade_qualifier')) or None,
+            'cert_number':     _s(data.get('cert_number')) or None,
+            'grading_cost':    _dec(data.get('grading_cost')),
             'comp_low':        _dec(data.get('comp_low')),
             'comp_avg':        _dec(data.get('comp_avg')),
             'comp_high':       _dec(data.get('comp_high')),
@@ -301,8 +362,10 @@ def get_inventory():
                    manufacturer, set_name, insert_name, card_number, player_name, team,
                    parallel_name, is_auto, is_relic, is_patch, is_rookie,
                    is_numbered, print_run, is_graded, grading_company, grade,
-                   grade_qualifier, cost_basis, item_price, tax_paid, shipping_paid,
-                   comp_low, comp_avg, comp_high, unrealized_gain_avg, inventory_notes
+                   grade_qualifier, grading_cost, break_id,
+                   cost_basis, item_price, tax_paid, shipping_paid,
+                   comp_low, comp_avg, comp_high, unrealized_gain_avg,
+                   front_image, back_image, inventory_notes
             FROM v_inventory_detail
             WHERE 1=1
         """
@@ -317,6 +380,18 @@ def get_inventory():
         rows = cur.fetchall()
 
         return jsonify([dict(r) for r in rows])
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+    finally:
+        close_connection(conn)
+
+
+@app.route('/api/breaks', methods=['GET'])
+def list_breaks():
+    conn = None
+    try:
+        conn = get_connection()
+        return jsonify(get_breaks(conn))
     except Exception as e:
         return jsonify({'error': str(e)}), 500
     finally:

@@ -101,6 +101,16 @@ TABLES = [
         created_at              TEXT NOT NULL DEFAULT (datetime('now'))
     )
     """,
+    """
+    CREATE TABLE IF NOT EXISTS breaks (
+        break_id        INTEGER PRIMARY KEY,
+        break_name      TEXT NOT NULL,
+        box_cost        REAL,
+        expected_cards  INTEGER,
+        notes           TEXT,
+        created_at      TEXT NOT NULL DEFAULT (datetime('now'))
+    )
+    """,
 ]
 
 # Column additions for existing databases that predate a schema change.
@@ -111,6 +121,8 @@ MIGRATIONS = [
     ("inventory", "shipping_paid", "REAL CHECK(shipping_paid >= 0)"),
     ("inventory", "front_image",   "TEXT"),
     ("inventory", "back_image",    "TEXT"),
+    ("inventory", "grading_cost",  "REAL CHECK(grading_cost >= 0)"),
+    ("inventory", "break_id",      "INTEGER REFERENCES breaks(break_id)"),
 ]
 
 VIEW_NAMES = ["v_inventory_detail"]
@@ -121,10 +133,11 @@ VIEWS = [
     SELECT
         i.inventory_id, i.card_id, i.status, i.acquisition_date,
         i.location, i.is_graded, i.grading_company, i.grade,
-        i.grade_qualifier, i.cert_number,
+        i.grade_qualifier, i.cert_number, i.grading_cost,
         i.cost_basis, i.item_price, i.tax_paid, i.shipping_paid,
         i.comp_low, i.comp_avg, i.comp_high, i.comp_updated_at,
         i.front_image, i.back_image,
+        i.break_id,
         i.notes AS inventory_notes,
         c.sport, c.year, c.manufacturer, c.set_name, c.card_number,
         c.player_name, c.team, c.is_base, c.insert_name, c.parallel_name,

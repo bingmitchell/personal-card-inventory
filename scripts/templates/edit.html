@@ -167,6 +167,51 @@
                     </div>
                 </div>
 
+                <!-- Grading -->
+                <div class="form-section">
+                    <h6 class="section-title">Grading</h6>
+                    <div class="mb-2">
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" id="is_graded" onchange="onGradedChange()">
+                            <label class="form-check-label" for="is_graded">This card is graded</label>
+                        </div>
+                    </div>
+                    <div id="gradingFields" style="display:none">
+                        <div class="row g-2 mb-2">
+                            <div class="col-md-4">
+                                <label class="form-label">Grading Company</label>
+                                <select class="form-select" id="grading_company">
+                                    <option value="">-- Select --</option>
+                                    <option value="PSA">PSA</option>
+                                    <option value="BGS">BGS (Beckett)</option>
+                                    <option value="SGC">SGC</option>
+                                    <option value="CGC">CGC</option>
+                                    <option value="CSG">CSG</option>
+                                    <option value="Other">Other</option>
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Grade</label>
+                                <input type="text" class="form-control" id="grade" placeholder="e.g. 10, 9.5">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Qualifier</label>
+                                <input type="text" class="form-control" id="grade_qualifier" placeholder="e.g. OC, MK">
+                            </div>
+                        </div>
+                        <div class="row g-2">
+                            <div class="col-md-6">
+                                <label class="form-label">Cert / Slab #</label>
+                                <input type="text" class="form-control" id="cert_number" placeholder="Certification number">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Grading Cost ($)</label>
+                                <input type="number" class="form-control" id="grading_cost" min="0" step="0.01" placeholder="0.00">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Ownership -->
                 <div class="form-section">
                     <h6 class="section-title">Ownership</h6>
@@ -310,6 +355,11 @@
         else { el.value = val ?? ''; }
     }
 
+    function onGradedChange() {
+        const checked = document.getElementById('is_graded').checked;
+        document.getElementById('gradingFields').style.display = checked ? '' : 'none';
+    }
+
     function showPhoto(side, filename) {
         const img = document.getElementById(`${side}Img`);
         const ph  = document.getElementById(`${side}Placeholder`);
@@ -359,6 +409,16 @@
             fill('is_relic', d.is_relic);
             fill('is_patch', d.is_patch);
             fill('print_run', d.print_run);
+
+            fill('is_graded', d.is_graded);
+            if (d.is_graded) {
+                document.getElementById('gradingFields').style.display = '';
+                fill('grading_company', d.grading_company);
+                fill('grade', d.grade);
+                fill('grade_qualifier', d.grade_qualifier);
+                fill('cert_number', d.cert_number);
+                fill('grading_cost', d.grading_cost);
+            }
 
             fill('status', d.status);
             fill('acquisition_date', d.acquisition_date);
@@ -413,6 +473,13 @@
             is_patch:  document.getElementById('is_patch').checked,
             print_run: parseInt(document.getElementById('print_run').value) || null,
 
+            is_graded:       document.getElementById('is_graded').checked,
+            grading_company: document.getElementById('grading_company').value || null,
+            grade:           document.getElementById('grade').value.trim() || null,
+            grade_qualifier: document.getElementById('grade_qualifier').value.trim() || null,
+            cert_number:     document.getElementById('cert_number').value.trim() || null,
+            grading_cost:    dec('grading_cost'),
+
             status: document.getElementById('status').value,
             acquisition_date: document.getElementById('acquisition_date').value || null,
 
@@ -453,6 +520,8 @@
         await fetch('/api/quit', { method: 'POST' });
         document.body.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100vh;font-family:sans-serif;color:#666"><p>Card Inventory has stopped. You can close this tab.</p></div>';
     }
+
+    setInterval(() => fetch('/api/ping', {method:'POST', keepalive:true}).catch(()=>{}), 8000);
 </script>
 </body>
 </html>
