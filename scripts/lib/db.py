@@ -10,10 +10,22 @@ from datetime import datetime
 from .schema import TABLES, MIGRATIONS, VIEW_NAMES, VIEWS
 
 
+def _icloud_dir() -> Path | None:
+    """Return the iCloud Drive app folder if iCloud is available, else None."""
+    candidate = Path.home() / 'Library' / 'Mobile Documents' / 'com~apple~CloudDocs' / 'Card Inventory'
+    if candidate.parent.exists():
+        candidate.mkdir(parents=True, exist_ok=True)
+        return candidate
+    return None
+
+
 def _db_path() -> Path:
     env = os.getenv('CARD_DB_PATH')
     if env:
         return Path(env)
+    icloud = _icloud_dir()
+    if icloud:
+        return icloud / 'card_inventory.db'
     data_dir = Path.home() / '.card_inventory'
     data_dir.mkdir(exist_ok=True)
     return data_dir / 'card_inventory.db'
@@ -24,7 +36,8 @@ def _photos_dir() -> Path:
     if env:
         p = Path(env)
     else:
-        p = Path.home() / '.card_inventory' / 'photos'
+        icloud = _icloud_dir()
+        p = (icloud / 'photos') if icloud else (Path.home() / '.card_inventory' / 'photos')
     p.mkdir(parents=True, exist_ok=True)
     return p
 

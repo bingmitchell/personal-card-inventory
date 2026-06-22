@@ -1,0 +1,519 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Edit Card</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; padding: 20px 0; }
+        .main-card { box-shadow: 0 10px 30px rgba(0,0,0,0.3); border: none; border-radius: 12px; }
+        .card-header-main {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white; border-radius: 12px 12px 0 0 !important;
+            padding: 1.25rem 1.5rem 0;
+        }
+        .nav-tabs .nav-link { color: rgba(255,255,255,0.75); border: none; padding: 0.5rem 1.25rem; font-weight: 500; }
+        .nav-tabs .nav-link.active { color: white; background: rgba(255,255,255,0.2); border-radius: 6px 6px 0 0; border: none; }
+        .nav-tabs .nav-link:hover { color: white; }
+        .nav-tabs { border-bottom: none; }
+        .form-section { margin-bottom: 1.5rem; padding-bottom: 1.5rem; border-bottom: 1px solid #e9ecef; }
+        .form-section:last-of-type { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
+        .section-title { font-weight: 600; color: #667eea; margin-bottom: 1rem; font-size: 0.95rem; text-transform: uppercase; letter-spacing: 0.5px; }
+        .form-label { font-weight: 500; color: #333; }
+        .form-control:focus, .form-select:focus { border-color: #667eea; box-shadow: 0 0 0 0.2rem rgba(102,126,234,0.25); }
+        .btn-primary { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border: none; }
+        .btn-primary:hover { background: linear-gradient(135deg, #764ba2 0%, #667eea 100%); }
+        .alert { border: none; border-left: 4px solid; }
+        .alert-success { border-left-color: #28a745; background-color: #f1f9f6; }
+        .alert-danger  { border-left-color: #dc3545; background-color: #fdf4f5; }
+        #loadingState { text-align: center; padding: 4rem; color: #999; }
+    </style>
+</head>
+<body>
+<div class="container mt-4 mb-5" style="max-width:680px">
+    <div class="card main-card">
+
+        <div class="card-header-main">
+            <div class="mb-2">
+                <h4 class="mb-0">Card Inventory</h4>
+                <small class="opacity-75">Personal sports card collection</small>
+            </div>
+            <ul class="nav nav-tabs d-flex align-items-center">
+                <li class="nav-item"><a class="nav-link" href="form.html">Add Card</a></li>
+                <li class="nav-item"><a class="nav-link" href="inventory.html">View Collection</a></li>
+                <li class="nav-item"><a class="nav-link active" href="#">Edit Entry</a></li>
+            </ul>
+        </div>
+
+        <div class="card-body p-4">
+            <div id="alertContainer"></div>
+            <div id="loadingState">Loading card data…</div>
+
+            <form id="editForm" onsubmit="handleSubmit(event)" style="display:none">
+
+                <!-- Card Info -->
+                <div class="form-section">
+                    <h6 class="section-title">Card Identification</h6>
+
+                    <div class="mb-3">
+                        <label class="form-label">Sport</label>
+                        <select class="form-select" id="sport" required>
+                            <option value="">-- Select --</option>
+                            <option value="baseball">Baseball</option>
+                            <option value="basketball">Basketball</option>
+                            <option value="football">Football</option>
+                            <option value="hockey">Hockey</option>
+                            <option value="soccer">Soccer</option>
+                            <option value="tennis">Tennis</option>
+                            <option value="golf">Golf</option>
+                            <option value="other">Other</option>
+                        </select>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label class="form-label">Year</label>
+                                <input type="number" class="form-control" id="year" min="1900" max="2100" required>
+                            </div>
+                        </div>
+                        <div class="col-md-8">
+                            <div class="mb-3">
+                                <label class="form-label">Manufacturer</label>
+                                <input type="text" class="form-control" id="manufacturer" required>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Set Name</label>
+                        <input type="text" class="form-control" id="set_name" required>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-8">
+                            <div class="mb-3">
+                                <label class="form-label">Player Name</label>
+                                <input type="text" class="form-control" id="player_name" required>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label class="form-label">Card #</label>
+                                <input type="text" class="form-control" id="card_number">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Team</label>
+                        <input type="text" class="form-control" id="team">
+                    </div>
+                </div>
+
+                <!-- Variant -->
+                <div class="form-section">
+                    <h6 class="section-title">Variants & Attributes</h6>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Parallel Name</label>
+                                <input type="text" class="form-control" id="parallel_name">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Insert Name</label>
+                                <input type="text" class="form-control" id="insert_name">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row mb-2">
+                        <div class="col-6 col-md-3">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="is_rookie">
+                                <label class="form-check-label" for="is_rookie">Rookie</label>
+                            </div>
+                        </div>
+                        <div class="col-6 col-md-3">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="is_auto">
+                                <label class="form-check-label" for="is_auto">Auto</label>
+                            </div>
+                        </div>
+                        <div class="col-6 col-md-3">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="is_relic">
+                                <label class="form-check-label" for="is_relic">Relic</label>
+                            </div>
+                        </div>
+                        <div class="col-6 col-md-3">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="is_patch">
+                                <label class="form-check-label" for="is_patch">Patch</label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-md-4 mt-2">
+                        <label class="form-label">Print Run</label>
+                        <input type="number" class="form-control" id="print_run" min="1" placeholder="/25">
+                    </div>
+                </div>
+
+                <!-- Grading -->
+                <div class="form-section">
+                    <h6 class="section-title">Grading</h6>
+                    <div class="mb-2">
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" id="is_graded" onchange="onGradedChange()">
+                            <label class="form-check-label" for="is_graded">This card is graded</label>
+                        </div>
+                    </div>
+                    <div id="gradingFields" style="display:none">
+                        <div class="row g-2 mb-2">
+                            <div class="col-md-4">
+                                <label class="form-label">Grading Company</label>
+                                <select class="form-select" id="grading_company">
+                                    <option value="">-- Select --</option>
+                                    <option value="PSA">PSA</option>
+                                    <option value="BGS">BGS (Beckett)</option>
+                                    <option value="SGC">SGC</option>
+                                    <option value="CGC">CGC</option>
+                                    <option value="CSG">CSG</option>
+                                    <option value="Other">Other</option>
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Grade</label>
+                                <input type="text" class="form-control" id="grade" placeholder="e.g. 10, 9.5">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Qualifier</label>
+                                <input type="text" class="form-control" id="grade_qualifier" placeholder="e.g. OC, MK">
+                            </div>
+                        </div>
+                        <div class="row g-2">
+                            <div class="col-md-6">
+                                <label class="form-label">Cert / Slab #</label>
+                                <input type="text" class="form-control" id="cert_number" placeholder="Certification number">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Grading Cost ($)</label>
+                                <input type="number" class="form-control" id="grading_cost" min="0" step="0.01" placeholder="0.00">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Ownership -->
+                <div class="form-section">
+                    <h6 class="section-title">Ownership</h6>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Status</label>
+                                <select class="form-select" id="status">
+                                    <option value="OWNED">Owned</option>
+                                    <option value="SOLD">Sold</option>
+                                    <option value="TRADED">Traded</option>
+                                    <option value="LOST">Lost</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Acquisition Date</label>
+                                <input type="date" class="form-control" id="acquisition_date">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Cost -->
+                <div class="form-section">
+                    <h6 class="section-title">Cost Breakdown</h6>
+                    <div class="row g-2 mb-2">
+                        <div class="col-md-4">
+                            <label class="form-label">Card Price ($)</label>
+                            <input type="number" class="form-control" id="item_price" min="0" step="0.01" oninput="updateTotal()">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Tax ($)</label>
+                            <input type="number" class="form-control" id="tax_paid" min="0" step="0.01" oninput="updateTotal()">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Shipping ($)</label>
+                            <input type="number" class="form-control" id="shipping_paid" min="0" step="0.01" oninput="updateTotal()">
+                        </div>
+                    </div>
+                    <div class="d-flex justify-content-end align-items-center gap-2">
+                        <span class="text-muted small">Total Cost Basis:</span>
+                        <strong id="costTotal" style="color:#667eea">$0.00</strong>
+                    </div>
+                </div>
+
+                <!-- Comps -->
+                <div class="form-section">
+                    <h6 class="section-title">Comparable Sales</h6>
+                    <div class="row g-2">
+                        <div class="col-md-4">
+                            <label class="form-label">Low ($)</label>
+                            <input type="number" class="form-control" id="comp_low" min="0" step="0.01">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Avg ($)</label>
+                            <input type="number" class="form-control" id="comp_avg" min="0" step="0.01">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">High ($)</label>
+                            <input type="number" class="form-control" id="comp_high" min="0" step="0.01">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Notes -->
+                <div class="form-section">
+                    <div class="mb-3">
+                        <label class="form-label">Notes</label>
+                        <textarea class="form-control" id="inventory_notes" rows="3"></textarea>
+                    </div>
+                </div>
+
+                <!-- Photos -->
+                <div class="form-section">
+                    <h6 class="section-title">Card Photos</h6>
+                    <div class="row g-3">
+                        <div class="col-6 text-center">
+                            <div class="mb-2" style="height:160px;background:#f8f9fe;border-radius:8px;display:flex;align-items:center;justify-content:center;overflow:hidden;">
+                                <img id="frontImg" src="" alt="Front"
+                                     style="display:none;max-height:160px;max-width:100%;object-fit:contain;">
+                                <span id="frontPlaceholder" class="text-muted small">No front photo</span>
+                            </div>
+                            <label class="form-label fw-500">Front</label>
+                            <input type="file" class="form-control form-control-sm" id="frontFile"
+                                   accept="image/*" onchange="uploadPhoto('front')">
+                            <div id="frontStatus" class="mt-1 small"></div>
+                        </div>
+                        <div class="col-6 text-center">
+                            <div class="mb-2" style="height:160px;background:#f8f9fe;border-radius:8px;display:flex;align-items:center;justify-content:center;overflow:hidden;">
+                                <img id="backImg" src="" alt="Back"
+                                     style="display:none;max-height:160px;max-width:100%;object-fit:contain;">
+                                <span id="backPlaceholder" class="text-muted small">No back photo</span>
+                            </div>
+                            <label class="form-label fw-500">Back</label>
+                            <input type="file" class="form-control form-control-sm" id="backFile"
+                                   accept="image/*" onchange="uploadPhoto('back')">
+                            <div id="backStatus" class="mt-1 small"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Actions -->
+                <div class="d-flex gap-2">
+                    <button type="submit" class="btn btn-primary flex-grow-1" id="submitBtn">
+                        <span id="submitText">Save Changes</span>
+                        <span id="submitSpinner" class="spinner-border spinner-border-sm d-none ms-1"></span>
+                    </button>
+                    <a href="inventory.html" class="btn btn-outline-secondary">Cancel</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    const INVENTORY_ID = parseInt(new URLSearchParams(location.search).get('id'));
+
+    function showAlert(type, message) {
+        const el = document.getElementById('alertContainer');
+        el.innerHTML = `<div class="alert alert-${type} alert-dismissible fade show" role="alert">
+            ${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>`;
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function updateTotal() {
+        const p = parseFloat(document.getElementById('item_price').value)    || 0;
+        const t = parseFloat(document.getElementById('tax_paid').value)      || 0;
+        const s = parseFloat(document.getElementById('shipping_paid').value) || 0;
+        document.getElementById('costTotal').textContent = '$' + (p + t + s).toFixed(2);
+    }
+
+    function fill(id, val) {
+        const el = document.getElementById(id);
+        if (!el) return;
+        if (el.type === 'checkbox') { el.checked = !!val; }
+        else { el.value = val ?? ''; }
+    }
+
+    function onGradedChange() {
+        const checked = document.getElementById('is_graded').checked;
+        document.getElementById('gradingFields').style.display = checked ? '' : 'none';
+    }
+
+    function showPhoto(side, filename) {
+        const img = document.getElementById(`${side}Img`);
+        const ph  = document.getElementById(`${side}Placeholder`);
+        img.src = `/photos/${filename}?t=${Date.now()}`;
+        img.style.display = '';
+        ph.style.display  = 'none';
+    }
+
+    async function uploadPhoto(side) {
+        const input = document.getElementById(`${side}File`);
+        const status = document.getElementById(`${side}Status`);
+        if (!input.files[0]) return;
+        status.innerHTML = '<span class="text-muted">Saving…</span>';
+        try {
+            // On iOS, photos are saved as data URLs in the DB for now
+            // (full Filesystem API integration can be added later)
+            const file = input.files[0];
+            const reader = new FileReader();
+            reader.onload = async (e) => {
+                const dataUrl = e.target.result;
+                const { updateInventory, getInventoryById } = await import('./js/db.js');
+                const row = await getInventoryById(INVENTORY_ID);
+                if (!row) return;
+                const field = `${side}_image`;
+                await updateInventory(INVENTORY_ID, { ...row, [field]: dataUrl });
+                showPhoto(side, dataUrl);
+                status.innerHTML = '<span class="text-success">Saved</span>';
+            };
+            reader.readAsDataURL(file);
+        } catch (e) {
+            status.innerHTML = `<span class="text-danger">${e.message}</span>`;
+        }
+    }
+
+    async function loadCard() {
+        try {
+            const { getInventoryById } = await import('./js/db.js');
+            const d = await getInventoryById(INVENTORY_ID);
+            if (!d) throw new Error('Entry not found');
+
+            fill('sport', d.sport);
+            fill('year', d.year);
+            fill('manufacturer', d.manufacturer);
+            fill('set_name', d.set_name);
+            fill('card_number', d.card_number);
+            fill('player_name', d.player_name);
+            fill('team', d.team);
+            fill('parallel_name', d.parallel_name);
+            fill('insert_name', d.insert_name);
+            fill('is_rookie', d.is_rookie);
+            fill('is_auto', d.is_auto);
+            fill('is_relic', d.is_relic);
+            fill('is_patch', d.is_patch);
+            fill('print_run', d.print_run);
+
+            fill('is_graded', d.is_graded);
+            if (d.is_graded) {
+                document.getElementById('gradingFields').style.display = '';
+                fill('grading_company', d.grading_company);
+                fill('grade', d.grade);
+                fill('grade_qualifier', d.grade_qualifier);
+                fill('cert_number', d.cert_number);
+                fill('grading_cost', d.grading_cost);
+            }
+
+            fill('status', d.status);
+            fill('acquisition_date', d.acquisition_date);
+
+            fill('item_price', d.item_price);
+            fill('tax_paid', d.tax_paid);
+            fill('shipping_paid', d.shipping_paid);
+            updateTotal();
+
+            fill('comp_low', d.comp_low);
+            fill('comp_avg', d.comp_avg);
+            fill('comp_high', d.comp_high);
+            fill('inventory_notes', d.inventory_notes);
+
+            if (d.front_image) showPhoto('front', d.front_image);
+            if (d.back_image)  showPhoto('back',  d.back_image);
+
+            document.getElementById('loadingState').style.display = 'none';
+            document.getElementById('editForm').style.display = '';
+        } catch (e) {
+            document.getElementById('loadingState').innerHTML =
+                `<p class="text-danger">Failed to load card: ${e.message}</p>
+                 <a href="inventory.html" class="btn btn-secondary">Back to Inventory</a>`;
+        }
+    }
+
+    async function handleSubmit(event) {
+        event.preventDefault();
+        const btn = document.getElementById('submitBtn');
+        const txt = document.getElementById('submitText');
+        const spin = document.getElementById('submitSpinner');
+        btn.disabled = true; txt.classList.add('d-none'); spin.classList.remove('d-none');
+
+        const dec = id => {
+            const v = parseFloat(document.getElementById(id).value);
+            return isNaN(v) ? null : v;
+        };
+
+        const payload = {
+            sport: document.getElementById('sport').value,
+            year: parseInt(document.getElementById('year').value),
+            manufacturer: document.getElementById('manufacturer').value,
+            set_name: document.getElementById('set_name').value,
+            card_number: document.getElementById('card_number').value || null,
+            player_name: document.getElementById('player_name').value,
+            team: document.getElementById('team').value || null,
+            parallel_name: document.getElementById('parallel_name').value || null,
+            insert_name: document.getElementById('insert_name').value || null,
+            is_rookie: document.getElementById('is_rookie').checked,
+            is_auto:   document.getElementById('is_auto').checked,
+            is_relic:  document.getElementById('is_relic').checked,
+            is_patch:  document.getElementById('is_patch').checked,
+            print_run: parseInt(document.getElementById('print_run').value) || null,
+
+            is_graded:       document.getElementById('is_graded').checked,
+            grading_company: document.getElementById('grading_company').value || null,
+            grade:           document.getElementById('grade').value.trim() || null,
+            grade_qualifier: document.getElementById('grade_qualifier').value.trim() || null,
+            cert_number:     document.getElementById('cert_number').value.trim() || null,
+            grading_cost:    dec('grading_cost'),
+
+            status: document.getElementById('status').value,
+            acquisition_date: document.getElementById('acquisition_date').value || null,
+
+            item_price:    dec('item_price'),
+            tax_paid:      dec('tax_paid'),
+            shipping_paid: dec('shipping_paid'),
+
+            comp_low:  dec('comp_low'),
+            comp_avg:  dec('comp_avg'),
+            comp_high: dec('comp_high'),
+
+            inventory_notes: document.getElementById('inventory_notes').value || null,
+        };
+
+        try {
+            const { updateCard, updateInventory, getInventoryById } = await import('./js/db.js');
+            const row = await getInventoryById(INVENTORY_ID);
+            if (!row) throw new Error('Entry not found');
+            await updateCard(row.card_id, payload);
+            await updateInventory(INVENTORY_ID, payload);
+            showAlert('success', '✅ <strong>Saved!</strong> Changes updated successfully.');
+        } catch (e) {
+            showAlert('danger', `❌ <strong>Error:</strong> ${e.message}`);
+        } finally {
+            btn.disabled = false; txt.classList.remove('d-none'); spin.classList.add('d-none');
+        }
+    }
+
+    loadCard();
+
+    // iOS: ensure DB is initialized on direct navigation
+    import('./js/db.js').then(({ initDB }) => initDB()).catch(() => {});
+</script>
+</body>
+</html>

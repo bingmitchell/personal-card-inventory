@@ -1,0 +1,18 @@
+{
+  "name": "card-inventory-ios",
+  "version": "1.0.0",
+  "description": "Card Inventory iOS app (Capacitor)",
+  "scripts": {
+    "ios": "npx cap open ios",
+    "sync": "npx cap sync ios",
+    "add-ios": "npx cap add ios"
+  },
+  "dependencies": {
+    "@capacitor/core": "^6.0.0",
+    "@capacitor/ios": "^6.0.0",
+    "@capacitor-community/sqlite": "^6.0.2"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^6.0.0"
+  }
+}

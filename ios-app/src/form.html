@@ -1,0 +1,811 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Card Inventory - Add Card</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px 0;
+        }
+        .container {
+            max-width: 600px;
+        }
+        .card {
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            border: none;
+        }
+        .card-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+        }
+        .form-label {
+            font-weight: 500;
+            color: #333;
+        }
+        .form-control:focus,
+        .form-select:focus {
+            border-color: #667eea;
+            box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+        }
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: none;
+        }
+        .btn-primary:hover {
+            background: linear-gradient(135deg, #764ba2 0%, #667eea 100%);
+        }
+        .alert {
+            border: none;
+            border-left: 4px solid;
+        }
+        .alert-success {
+            border-left-color: #28a745;
+            background-color: #f1f9f6;
+        }
+        .alert-danger {
+            border-left-color: #dc3545;
+            background-color: #fdf4f5;
+        }
+        .alert-warning {
+            border-left-color: #ffc107;
+            background-color: #fffdf4;
+        }
+        .required::after {
+            content: " *";
+            color: red;
+        }
+        .spinner-border {
+            width: 1rem;
+            height: 1rem;
+            margin-right: 0.5rem;
+        }
+        .form-section {
+            margin-bottom: 1.5rem;
+            padding-bottom: 1.5rem;
+            border-bottom: 1px solid #e9ecef;
+        }
+        .form-section:last-of-type {
+            border-bottom: none;
+            margin-bottom: 0;
+            padding-bottom: 0;
+        }
+        .trade-result-item {
+            padding: 8px 12px;
+            cursor: pointer;
+            font-size: 0.875rem;
+            border-bottom: 1px solid #f0f0f0;
+        }
+        .trade-result-item:hover { background-color: #f0f4ff; }
+        .trade-result-item:last-child { border-bottom: none; }
+        .trade-chip {
+            display: inline-flex;
+            align-items: center;
+            background: #667eea;
+            color: white;
+            border-radius: 20px;
+            padding: 4px 12px;
+            font-size: 0.8rem;
+            margin: 3px 3px 3px 0;
+        }
+        .trade-chip button {
+            background: none;
+            border: none;
+            color: white;
+            margin-left: 6px;
+            padding: 0;
+            font-size: 1rem;
+            line-height: 1;
+            cursor: pointer;
+            opacity: 0.8;
+        }
+        .trade-chip button:hover { opacity: 1; }
+        .section-title {
+            font-weight: 600;
+            color: #667eea;
+            margin-bottom: 1rem;
+            font-size: 0.95rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container mt-4">
+        <div class="card">
+            <div class="card-header" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 1.25rem 1.5rem 0; border-radius: 12px 12px 0 0;">
+                <div class="d-flex justify-content-between align-items-start mb-2">
+                    <div>
+                        <h4 class="mb-0">Card Inventory</h4>
+                        <small class="opacity-75">Personal sports card collection</small>
+                    </div>
+                </div>
+                <ul class="nav nav-tabs" style="border-bottom: none;">
+                    <li class="nav-item">
+                        <a class="nav-link active" href="form.html"
+                           style="color:white; background:rgba(255,255,255,0.2); border:none; border-radius:6px 6px 0 0; font-weight:500; padding: 0.5rem 1.25rem;">
+                            Add Card
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="inventory.html"
+                           style="color:rgba(255,255,255,0.75); border:none; font-weight:500; padding: 0.5rem 1.25rem;">
+                            View Collection
+                        </a>
+                    </li>
+                </ul>
+            </div>
+            <div class="card-body p-4">
+                <div id="alertContainer"></div>
+
+                <form id="cardForm" onsubmit="handleSubmit(event)">
+                    <!-- Core Identification -->
+                    <div class="form-section">
+                        <h6 class="section-title">Identification</h6>
+
+                        <div class="mb-3">
+                            <label for="sport" class="form-label required">Sport</label>
+                            <select class="form-select" id="sport" name="sport" required>
+                                <option value="">-- Select Sport --</option>
+                                <option value="baseball">Baseball</option>
+                                <option value="basketball">Basketball</option>
+                                <option value="football">Football</option>
+                                <option value="hockey">Hockey</option>
+                                <option value="soccer">Soccer</option>
+                                <option value="tennis">Tennis</option>
+                                <option value="golf">Golf</option>
+                                <option value="other">Other</option>
+                            </select>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="year" class="form-label required">Year</label>
+                                    <input type="number" class="form-control" id="year" name="year" 
+                                           min="1900" max="2100" required 
+                                           placeholder="e.g. 2023">
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="manufacturer" class="form-label required">Manufacturer</label>
+                                    <input type="text" class="form-control" id="manufacturer" name="manufacturer" 
+                                           required placeholder="e.g. Topps, Panini">
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="setName" class="form-label required">Set Name</label>
+                            <input type="text" class="form-control" id="setName" name="set_name" 
+                                   required placeholder="e.g. Chrome Rookie, Prizm">
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-8">
+                                <div class="mb-3">
+                                    <label for="playerName" class="form-label required">Player Name</label>
+                                    <input type="text" class="form-control" id="playerName" name="player_name" 
+                                           required placeholder="e.g. LeBron James">
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="mb-3">
+                                    <label for="cardNumber" class="form-label">Card #</label>
+                                    <input type="text" class="form-control" id="cardNumber" name="card_number" 
+                                           placeholder="e.g. 221">
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="team" class="form-label">Team</label>
+                            <input type="text" class="form-control" id="team" name="team" 
+                                   placeholder="e.g. Cleveland Cavaliers">
+                        </div>
+                    </div>
+
+                    <!-- Variants & Attributes -->
+                    <div class="form-section">
+                        <h6 class="section-title">Variants & Attributes</h6>
+
+                        <div class="mb-3">
+                            <label for="parallelName" class="form-label">Parallel Name</label>
+                            <input type="text" class="form-control" id="parallelName" name="parallel_name" 
+                                   placeholder="e.g. Gold Refractor, Silver Prizm">
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="insertName" class="form-label">Insert Name</label>
+                            <input type="text" class="form-control" id="insertName" name="insert_name" 
+                                   placeholder="e.g. Future Stars, Legendary">
+                        </div>
+
+                        <div class="row">
+                            <div class="col-6">
+                                <div class="form-check mb-3">
+                                    <input class="form-check-input" type="checkbox" id="isAuto" name="is_auto">
+                                    <label class="form-check-label" for="isAuto">
+                                        Autograph
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <div class="form-check mb-3">
+                                    <input class="form-check-input" type="checkbox" id="isRelic" name="is_relic">
+                                    <label class="form-check-label" for="isRelic">
+                                        Memorabilia
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <div class="form-check mb-3">
+                                    <input class="form-check-input" type="checkbox" id="isPatch" name="is_patch">
+                                    <label class="form-check-label" for="isPatch">
+                                        Patch Relic
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <div class="form-check mb-3">
+                                    <input class="form-check-input" type="checkbox" id="isRookie" name="is_rookie">
+                                    <label class="form-check-label" for="isRookie">
+                                        Rookie Card
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="printRun" class="form-label">Print Run</label>
+                                    <input type="number" class="form-control" id="printRun" name="print_run" 
+                                           min="1" placeholder="e.g. 25 for /25">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Grading -->
+                    <div class="form-section">
+                        <h6 class="section-title">Grading</h6>
+                        <div class="mb-2">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" id="isGraded" onchange="onGradedChange()">
+                                <label class="form-check-label" for="isGraded">This card is graded</label>
+                            </div>
+                        </div>
+                        <div id="gradingFields" style="display:none">
+                            <div class="row g-2 mb-2">
+                                <div class="col-md-4">
+                                    <label class="form-label">Grading Company</label>
+                                    <select class="form-select" id="gradingCompany">
+                                        <option value="">-- Select --</option>
+                                        <option value="PSA">PSA</option>
+                                        <option value="BGS">BGS (Beckett)</option>
+                                        <option value="SGC">SGC</option>
+                                        <option value="CGC">CGC</option>
+                                        <option value="CSG">CSG</option>
+                                        <option value="Other">Other</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">Grade</label>
+                                    <input type="text" class="form-control" id="gradeValue" placeholder="e.g. 10, 9.5">
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">Qualifier</label>
+                                    <input type="text" class="form-control" id="gradeQualifier" placeholder="e.g. OC, MK">
+                                </div>
+                            </div>
+                            <div class="row g-2">
+                                <div class="col-md-6">
+                                    <label class="form-label">Cert / Slab #</label>
+                                    <input type="text" class="form-control" id="certNumber" placeholder="Certification number">
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">Grading Cost ($)</label>
+                                    <input type="number" class="form-control" id="gradingCost" min="0" step="0.01" placeholder="0.00">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Acquisition -->
+                    <div class="form-section">
+                        <h6 class="section-title">Acquisition</h6>
+
+                        <div class="mb-3">
+                            <label class="form-label">How did you acquire this card?</label>
+                            <div class="btn-group w-100" role="group">
+                                <input type="radio" class="btn-check" name="acquisition_type" id="typePurchase" value="PURCHASE" onchange="onAcquisitionTypeChange()">
+                                <label class="btn btn-outline-primary" for="typePurchase">Purchase</label>
+                                <input type="radio" class="btn-check" name="acquisition_type" id="typeTrade" value="TRADE" onchange="onAcquisitionTypeChange()">
+                                <label class="btn btn-outline-primary" for="typeTrade">Trade</label>
+                                <input type="radio" class="btn-check" name="acquisition_type" id="typePack" value="PACK" onchange="onAcquisitionTypeChange()">
+                                <label class="btn btn-outline-primary" for="typePack">Pack / Break</label>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="acquisitionDate" class="form-label">Date</label>
+                                    <input type="date" class="form-control" id="acquisitionDate" name="acquisition_date">
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="venue" class="form-label">Venue</label>
+                                    <select class="form-select" id="venue" name="venue">
+                                        <option value="">-- Select --</option>
+                                        <option value="eBay">eBay</option>
+                                        <option value="COMC">COMC</option>
+                                        <option value="Card Show">Card Show</option>
+                                        <option value="LCS">LCS (Local Card Shop)</option>
+                                        <option value="Facebook">Facebook Group</option>
+                                        <option value="Personal">Personal</option>
+                                        <option value="Other">Other</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="counterparty" class="form-label" id="counterpartyLabel">From</label>
+                            <input type="text" class="form-control" id="counterparty" name="counterparty"
+                                   placeholder="Seller / trader name">
+                        </div>
+
+                        <!-- Purchase: itemized cost breakdown -->
+                        <div id="purchaseFields" style="display:none">
+                            <div class="row g-2 mb-2">
+                                <div class="col-md-4">
+                                    <label for="itemPrice" class="form-label">Card Price ($)</label>
+                                    <input type="number" class="form-control" id="itemPrice" name="item_price"
+                                           min="0" step="0.01" placeholder="0.00" oninput="updateCostTotal()">
+                                </div>
+                                <div class="col-md-4">
+                                    <label for="taxPaid" class="form-label">Tax ($)</label>
+                                    <input type="number" class="form-control" id="taxPaid" name="tax_paid"
+                                           min="0" step="0.01" placeholder="0.00" oninput="updateCostTotal()">
+                                </div>
+                                <div class="col-md-4">
+                                    <label for="shippingPaid" class="form-label">Shipping ($)</label>
+                                    <input type="number" class="form-control" id="shippingPaid" name="shipping_paid"
+                                           min="0" step="0.01" placeholder="0.00" oninput="updateCostTotal()">
+                                </div>
+                            </div>
+                            <div class="d-flex justify-content-end">
+                                <span class="text-muted small me-2 align-self-center">Total Cost Basis:</span>
+                                <span id="costTotal" class="fw-bold fs-6" style="color:#667eea">$0.00</span>
+                            </div>
+                        </div>
+
+                        <!-- Trade: card picker + cash component -->
+                        <div id="tradeFields" style="display:none">
+                            <div class="mb-3">
+                                <label class="form-label">Cards You Traded Away</label>
+                                <div class="position-relative">
+                                    <input type="text" class="form-control" id="tradeSearch"
+                                           placeholder="Search your inventory by player, set, year..."
+                                           oninput="onTradeSearch(this.value)"
+                                           autocomplete="off">
+                                    <div id="tradeSearchResults"
+                                         class="position-absolute w-100 bg-white border rounded-bottom shadow-sm"
+                                         style="display:none; z-index:200; max-height:220px; overflow-y:auto; top:100%"></div>
+                                </div>
+                                <div id="selectedTradeCards" class="mt-2">
+                                    <p class="text-muted small mb-0">No cards selected yet.</p>
+                                </div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="cashComponent" class="form-label">Cash Component ($) <small class="text-muted">optional</small></label>
+                                <small class="text-muted d-block" style="font-size:0.75rem">Negative = you paid extra cash &nbsp;|&nbsp; Positive = you received extra cash</small>
+                                <input type="number" class="form-control" id="cashComponent" name="cash_component"
+                                       step="0.01" placeholder="0.00">
+                            </div>
+                        </div>
+
+                        <!-- Pack/Break: break name, box cost, card count -->
+                        <div id="packBreakFields" style="display:none">
+                            <div class="mb-3">
+                                <label class="form-label">Break Name / Label</label>
+                                <input type="text" class="form-control" id="breakName"
+                                       placeholder="e.g. 2023 Topps Chrome Hobby Box #1"
+                                       list="breakSuggestions">
+                                <datalist id="breakSuggestions"></datalist>
+                                <small class="text-muted">Same name groups cards from the same box — used to split cost</small>
+                            </div>
+                            <div class="row g-2 align-items-end">
+                                <div class="col-md-4">
+                                    <label class="form-label">Box / Pack Cost ($)</label>
+                                    <input type="number" class="form-control" id="breakBoxCost"
+                                           min="0" step="0.01" placeholder="0.00" oninput="updateBreakCost()">
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">Total Cards from Break</label>
+                                    <input type="number" class="form-control" id="breakCardCount"
+                                           min="1" step="1" placeholder="e.g. 10" oninput="updateBreakCost()">
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">Cost per Card</label>
+                                    <input type="text" class="form-control" id="breakCostPerCard"
+                                           readonly style="background:#f0f4ff;font-weight:600;color:#667eea"
+                                           placeholder="—">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Comparable Sales -->
+                    <div class="form-section">
+                        <h6 class="section-title">Comparable Sales</h6>
+                        <div class="text-muted small mb-2" id="compBaseline" style="display:none">
+                            Baseline from card price: <strong id="compBaselineValue">—</strong>
+                            &nbsp;·&nbsp; Leave comps blank to use this as the value estimate.
+                        </div>
+                        <div class="row">
+                            <div class="col-md-4">
+                                <div class="mb-3">
+                                    <label for="compLow" class="form-label">Low ($)</label>
+                                    <input type="number" class="form-control" id="compLow" name="comp_low"
+                                           min="0" step="0.01" placeholder="0.00">
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="mb-3">
+                                    <label for="compAvg" class="form-label">Avg ($)</label>
+                                    <input type="number" class="form-control" id="compAvg" name="comp_avg"
+                                           min="0" step="0.01" placeholder="0.00">
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="mb-3">
+                                    <label for="compHigh" class="form-label">High ($)</label>
+                                    <input type="number" class="form-control" id="compHigh" name="comp_high"
+                                           min="0" step="0.01" placeholder="0.00">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Notes -->
+                    <div class="form-section">
+                        <div class="mb-3">
+                            <label for="notes" class="form-label">Notes</label>
+                            <textarea class="form-control" id="notes" name="notes" rows="3"
+                                      placeholder="Any additional notes about this card..."></textarea>
+                        </div>
+                    </div>
+
+                    <!-- Submit -->
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-primary btn-lg" id="submitBtn">
+                            <span id="submitText">➕ Add Card</span>
+                            <span id="submitSpinner" class="spinner-border d-none"></span>
+                        </button>
+                    </div>
+                </form>
+
+                <hr class="my-4">
+                <small class="text-muted">
+                    Fields marked with <span class="required"></span> are required.<br>
+                    Cards are checked for duplicates before insertion.
+                </small>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        function showAlert(type, message) {
+            const alertContainer = document.getElementById('alertContainer');
+            const alertDiv = document.createElement('div');
+            alertDiv.className = `alert alert-${type} alert-dismissible fade show`;
+            alertDiv.setAttribute('role', 'alert');
+            alertDiv.innerHTML = `
+                ${message}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            `;
+            alertContainer.innerHTML = '';
+            alertContainer.appendChild(alertDiv);
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        function setSubmitting(isSubmitting) {
+            const submitBtn = document.getElementById('submitBtn');
+            const submitText = document.getElementById('submitText');
+            const submitSpinner = document.getElementById('submitSpinner');
+
+            submitBtn.disabled = isSubmitting;
+            if (isSubmitting) {
+                submitText.classList.add('d-none');
+                submitSpinner.classList.remove('d-none');
+            } else {
+                submitText.classList.remove('d-none');
+                submitSpinner.classList.add('d-none');
+            }
+        }
+
+        function updateCostTotal() {
+            const price    = parseFloat(document.getElementById('itemPrice').value)    || 0;
+            const tax      = parseFloat(document.getElementById('taxPaid').value)      || 0;
+            const shipping = parseFloat(document.getElementById('shippingPaid').value) || 0;
+            const total = price + tax + shipping;
+            document.getElementById('costTotal').textContent = '$' + total.toFixed(2);
+
+            const baselineEl = document.getElementById('compBaseline');
+            const baselineVal = document.getElementById('compBaselineValue');
+            if (price > 0) {
+                baselineVal.textContent = '$' + price.toFixed(2);
+                baselineEl.style.display = '';
+            } else {
+                baselineEl.style.display = 'none';
+            }
+        }
+
+        function onGradedChange() {
+            const checked = document.getElementById('isGraded').checked;
+            document.getElementById('gradingFields').style.display = checked ? '' : 'none';
+        }
+
+        function onAcquisitionTypeChange() {
+            const type = document.querySelector('[name="acquisition_type"]:checked')?.value || '';
+            document.getElementById('purchaseFields').style.display  = type === 'PURCHASE' ? '' : 'none';
+            document.getElementById('tradeFields').style.display     = type === 'TRADE'    ? '' : 'none';
+            document.getElementById('packBreakFields').style.display = type === 'PACK'     ? '' : 'none';
+            document.getElementById('counterpartyLabel').textContent = type === 'TRADE' ? 'With' : 'From';
+            if (type === 'PACK') loadBreakSuggestions();
+        }
+
+        function updateBreakCost() {
+            const cost  = parseFloat(document.getElementById('breakBoxCost').value) || 0;
+            const count = parseInt(document.getElementById('breakCardCount').value)  || 0;
+            document.getElementById('breakCostPerCard').value =
+                (cost > 0 && count > 0) ? '$' + (cost / count).toFixed(2) : '—';
+        }
+
+        async function loadBreakSuggestions() {
+            try {
+                const { getBreaks } = await import('./js/db.js');
+                const breaks = await getBreaks();
+                const dl = document.getElementById('breakSuggestions');
+                dl.innerHTML = breaks.map(b => `<option value="${b.break_name}">`).join('');
+            } catch (_) {}
+        }
+
+        async function handleSubmit(event) {
+            event.preventDefault();
+
+            setSubmitting(true);
+
+            const formData = new FormData(document.getElementById('cardForm'));
+
+            const acquisitionType = formData.get('acquisition_type') || null;
+            const isPurchase = acquisitionType === 'PURCHASE';
+            const isTrade    = acquisitionType === 'TRADE';
+            const isPack     = acquisitionType === 'PACK';
+
+            const itemPrice    = isPurchase ? parseFloat(document.getElementById('itemPrice').value)    || null : null;
+            const taxPaid      = isPurchase ? parseFloat(document.getElementById('taxPaid').value)      || null : null;
+            const shippingPaid = isPurchase ? parseFloat(document.getElementById('shippingPaid').value) || null : null;
+
+            const isGraded = document.getElementById('isGraded').checked;
+
+            const data = {
+                sport: formData.get('sport'),
+                year: parseInt(formData.get('year')),
+                manufacturer: formData.get('manufacturer'),
+                set_name: formData.get('set_name'),
+                card_number: formData.get('card_number') || null,
+                player_name: formData.get('player_name'),
+                team: formData.get('team') || null,
+                parallel_name: formData.get('parallel_name') || null,
+                insert_name: formData.get('insert_name') || null,
+                is_auto: document.getElementById('isAuto').checked,
+                is_relic: document.getElementById('isRelic').checked,
+                is_patch: document.getElementById('isPatch').checked,
+                is_rookie: document.getElementById('isRookie').checked,
+                print_run: formData.get('print_run') ? parseInt(formData.get('print_run')) : null,
+                notes: formData.get('notes') || null,
+                // Grading
+                is_graded:       isGraded,
+                grading_company: isGraded ? (document.getElementById('gradingCompany').value || null) : null,
+                grade:           isGraded ? (document.getElementById('gradeValue').value.trim() || null) : null,
+                grade_qualifier: isGraded ? (document.getElementById('gradeQualifier').value.trim() || null) : null,
+                cert_number:     isGraded ? (document.getElementById('certNumber').value.trim() || null) : null,
+                grading_cost:    isGraded ? (parseFloat(document.getElementById('gradingCost').value) || null) : null,
+                // Acquisition
+                acquisition_type: acquisitionType,
+                acquisition_date: formData.get('acquisition_date') || null,
+                counterparty: formData.get('counterparty') || null,
+                venue: formData.get('venue') || null,
+                item_price:    itemPrice,
+                tax_paid:      taxPaid,
+                shipping_paid: shippingPaid,
+                cash_component: isTrade && formData.get('cash_component')
+                    ? parseFloat(formData.get('cash_component')) : null,
+                traded_inventory_ids: isTrade ? selectedTradeCards.map(c => c.id) : [],
+                // Pack/Break
+                break_name:       isPack ? (document.getElementById('breakName').value.trim() || null) : null,
+                break_box_cost:   isPack ? (parseFloat(document.getElementById('breakBoxCost').value) || null) : null,
+                break_card_count: isPack ? (parseInt(document.getElementById('breakCardCount').value) || null) : null,
+                // Comps
+                comp_low:  formData.get('comp_low')  ? parseFloat(formData.get('comp_low'))  : null,
+                comp_avg:  formData.get('comp_avg')  ? parseFloat(formData.get('comp_avg'))  : null,
+                comp_high: formData.get('comp_high') ? parseFloat(formData.get('comp_high')) : null,
+            };
+
+            try {
+                const {
+                    checkDuplicateCard, insertCard, insertInventory,
+                    insertTransaction, insertTransactionItem,
+                    markInventoryDisposed, getOrCreateBreak
+                } = await import('./js/db.js');
+
+                const { isDuplicate, cardId: existingId } = await checkDuplicateCard(data);
+                if (isDuplicate) {
+                    showAlert('warning',
+                        `⚠️ <strong>Duplicate Card</strong><br>` +
+                        `This card already exists in your inventory (ID: ${existingId}).`
+                    );
+                    setSubmitting(false);
+                    return;
+                }
+
+                // Resolve break for pack/break cards
+                let breakId = null;
+                if (isPack && data.break_name && data.break_box_cost && data.break_card_count) {
+                    breakId = await getOrCreateBreak(data.break_name, data.break_box_cost, data.break_card_count);
+                    data.item_price = Math.round((data.break_box_cost / data.break_card_count) * 100) / 100;
+                    data.cost_basis = data.item_price;
+                }
+
+                const cardId = await insertCard(data);
+                const inventoryId = await insertInventory(cardId, {
+                    cost_basis: data.cost_basis,
+                    item_price: data.item_price,
+                    tax_paid: isPack ? null : data.tax_paid,
+                    shipping_paid: isPack ? null : data.shipping_paid,
+                    comp_low: data.comp_low, comp_avg: data.comp_avg, comp_high: data.comp_high,
+                    acquisition_date: data.acquisition_date,
+                    is_graded: data.is_graded, grading_company: data.grading_company,
+                    grade: data.grade, grade_qualifier: data.grade_qualifier,
+                    cert_number: data.cert_number, grading_cost: data.grading_cost,
+                    break_id: breakId,
+                });
+
+                if (data.acquisition_type) {
+                    const txType = data.acquisition_type === 'TRADE' ? 'TRADE' : 'PURCHASE';
+                    const txId = await insertTransaction({
+                        transaction_type: txType,
+                        transaction_date: data.acquisition_date,
+                        counterparty: data.counterparty,
+                        venue: data.venue,
+                        cash_component: txType === 'TRADE' ? (data.cash_component ?? 0) : 0,
+                        total_price: data.cost_basis,
+                    });
+                    await insertTransactionItem(txId, inventoryId, 'acquired', data.cost_basis);
+                    if (txType === 'TRADE' && data.traded_inventory_ids?.length) {
+                        await markInventoryDisposed(data.traded_inventory_ids, txId);
+                    }
+                }
+
+                showAlert('success',
+                    `✅ <strong>Success!</strong> ${data.player_name} added — ` +
+                    `${data.sport.toUpperCase()} ${data.year} ${data.set_name}`
+                );
+                document.getElementById('cardForm').reset();
+                selectedTradeCards = [];
+                renderSelectedCards();
+            } catch (error) {
+                showAlert('danger', `❌ <strong>Error:</strong> ${error.message}`);
+            } finally {
+                setSubmitting(false);
+            }
+        }
+
+        // Auto-scroll to alerts
+        document.getElementById('alertContainer').addEventListener('shown.bs.alert', () => {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        });
+
+        // ── Trade card picker ──────────────────────────────────────────
+        let selectedTradeCards = [];
+        let searchDebounce = null;
+
+        function onTradeSearch(value) {
+            clearTimeout(searchDebounce);
+            if (value.length < 2) { hideTradeResults(); return; }
+            searchDebounce = setTimeout(() => fetchTradeResults(value), 280);
+        }
+
+        async function fetchTradeResults(query) {
+            try {
+                const { searchOwnedInventory } = await import('./js/db.js');
+                const cards = await searchOwnedInventory(query);
+                showTradeResults(cards);
+            } catch (e) {
+                hideTradeResults();
+            }
+        }
+
+        function cardLabel(c) {
+            let label = `${c.year} ${c.manufacturer} ${c.set_name} — ${c.player_name}`;
+            if (c.parallel_name) label += ` (${c.parallel_name})`;
+            if (c.card_number)   label += ` #${c.card_number}`;
+            if (c.is_graded)     label += ` [${c.grading_company} ${c.grade}]`;
+            return label;
+        }
+
+        function showTradeResults(cards) {
+            const box = document.getElementById('tradeSearchResults');
+            if (cards.length === 0) {
+                box.innerHTML = `<div class="trade-result-item text-muted">
+                    No owned cards found.
+                    <a href="form.html" onclick="hideTradeResults()">Add that card first</a>,
+                    then search again.
+                </div>`;
+            } else {
+                box.innerHTML = cards.map(c => {
+                    const label = cardLabel(c).replace(/'/g, "\\'");
+                    return `<div class="trade-result-item" onclick="selectTradeCard(${c.inventory_id}, '${label}')">
+                        ${cardLabel(c)}
+                    </div>`;
+                }).join('');
+            }
+            box.style.display = 'block';
+        }
+
+        function hideTradeResults() {
+            document.getElementById('tradeSearchResults').style.display = 'none';
+        }
+
+        function selectTradeCard(inventoryId, label) {
+            if (selectedTradeCards.find(c => c.id === inventoryId)) return;
+            selectedTradeCards.push({ id: inventoryId, label });
+            renderSelectedCards();
+            document.getElementById('tradeSearch').value = '';
+            hideTradeResults();
+        }
+
+        function removeTradeCard(inventoryId) {
+            selectedTradeCards = selectedTradeCards.filter(c => c.id !== inventoryId);
+            renderSelectedCards();
+        }
+
+        function renderSelectedCards() {
+            const container = document.getElementById('selectedTradeCards');
+            if (!container) return;
+            if (selectedTradeCards.length === 0) {
+                container.innerHTML = '<p class="text-muted small mb-0">No cards selected yet.</p>';
+            } else {
+                container.innerHTML = selectedTradeCards.map(c =>
+                    `<span class="trade-chip">
+                        ${c.label}
+                        <button type="button" onclick="removeTradeCard(${c.id})" title="Remove">&times;</button>
+                    </span>`
+                ).join('');
+            }
+        }
+
+        // Close search results when clicking outside
+        document.addEventListener('click', e => {
+            if (!e.target.closest('#tradeSearch') && !e.target.closest('#tradeSearchResults')) {
+                hideTradeResults();
+            }
+        });
+
+        // iOS: init DB on page load (index.html already does this, but guard for direct navigation)
+        import('./js/db.js').then(({ initDB }) => initDB()).catch(() => {});
+    </script>
+</body>
+</html>

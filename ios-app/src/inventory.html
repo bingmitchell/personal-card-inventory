@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Card Inventory - View Collection</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px 0;
+        }
+        .main-card {
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            border: none;
+            border-radius: 12px;
+        }
+        .card-header-main {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 12px 12px 0 0 !important;
+            padding: 1.25rem 1.5rem 0;
+        }
+        .nav-tabs .nav-link {
+            color: rgba(255,255,255,0.75);
+            border: none;
+            padding: 0.5rem 1.25rem;
+            font-weight: 500;
+        }
+        .nav-tabs .nav-link.active {
+            color: white;
+            background: rgba(255,255,255,0.2);
+            border-radius: 6px 6px 0 0;
+            border: none;
+        }
+        .nav-tabs .nav-link:hover { color: white; }
+        .nav-tabs { border-bottom: none; }
+
+        .stat-card {
+            background: #f8f9fe;
+            border: 1px solid #e3e6f8;
+            border-radius: 10px;
+            padding: 1rem;
+            text-align: center;
+        }
+        .stat-value { font-size: 1.4rem; font-weight: 700; color: #667eea; }
+        .stat-label { font-size: 0.75rem; color: #888; text-transform: uppercase; letter-spacing: 0.5px; }
+
+        .table-wrapper { overflow-x: auto; }
+        table { font-size: 0.85rem; min-width: 900px; }
+        thead th {
+            background: #f0f2ff;
+            color: #555;
+            font-weight: 600;
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.4px;
+            cursor: pointer;
+            white-space: nowrap;
+            user-select: none;
+        }
+        thead th:hover { background: #e3e6ff; }
+        thead th.sort-asc::after  { content: ' ▲'; color: #667eea; }
+        thead th.sort-desc::after { content: ' ▼'; color: #667eea; }
+        tbody tr:hover { background: #f8f9fe; }
+
+        .badge-rc    { background: #28a745; }
+        .badge-auto  { background: #667eea; }
+        .badge-relic { background: #fd7e14; }
+        .badge-patch { background: #dc3545; }
+        .badge-num   { background: #6c757d; }
+
+        .status-OWNED  { color: #28a745; font-weight: 600; }
+        .status-SOLD   { color: #dc3545; font-weight: 600; }
+        .status-TRADED { color: #fd7e14; font-weight: 600; }
+        .status-LOST   { color: #6c757d; font-weight: 600; }
+
+        .gain-pos { color: #28a745; font-weight: 600; }
+        .gain-neg { color: #dc3545; font-weight: 600; }
+        .gain-nil { color: #aaa; }
+
+        .filter-bar { background: #f8f9fe; border-radius: 8px; padding: 1rem; margin-bottom: 1rem; }
+        .btn-status { font-size: 0.8rem; padding: 4px 12px; }
+        .btn-status.active { background: #667eea; border-color: #667eea; color: white; }
+
+        #noResults { display: none; text-align: center; padding: 3rem; color: #aaa; }
+    </style>
+</head>
+<body>
+<div class="container-xl mt-4 mb-5">
+    <div class="card main-card">
+
+        <!-- Header + nav tabs -->
+        <div class="card-header-main">
+            <div class="d-flex justify-content-between align-items-start mb-2">
+                <div>
+                    <h4 class="mb-0">Card Inventory</h4>
+                    <small class="opacity-75">Personal sports card collection</small>
+                </div>
+            </div>
+            <ul class="nav nav-tabs d-flex align-items-center">
+                <li class="nav-item">
+                    <a class="nav-link" href="form.html">Add Card</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link active" href="inventory.html">View Collection</a>
+                </li>
+            </ul>
+        </div>
+
+        <div class="card-body p-4">
+
+            <!-- Summary stats -->
+            <div class="row g-3 mb-4" id="statsRow">
+                <div class="col-6 col-md-3">
+                    <div class="stat-card">
+                        <div class="stat-value" id="statCards">—</div>
+                        <div class="stat-label">Cards Owned</div>
+                    </div>
+                </div>
+                <div class="col-6 col-md-3">
+                    <div class="stat-card">
+                        <div class="stat-value" id="statCost">—</div>
+                        <div class="stat-label">Total Cost</div>
+                    </div>
+                </div>
+                <div class="col-6 col-md-3">
+                    <div class="stat-card">
+                        <div class="stat-value" id="statValue">—</div>
+                        <div class="stat-label">Est. Value (avg)</div>
+                    </div>
+                </div>
+                <div class="col-6 col-md-3">
+                    <div class="stat-card">
+                        <div class="stat-value" id="statGain">—</div>
+                        <div class="stat-label">Unrealized Gain</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Filters -->
+            <div class="filter-bar">
+                <div class="row g-2 align-items-center">
+                    <div class="col-md-4">
+                        <input type="text" class="form-control form-control-sm" id="searchBox"
+                               placeholder="Search player, set, manufacturer…" oninput="applyFilters()">
+                    </div>
+                    <div class="col-md-3">
+                        <select class="form-select form-select-sm" id="sportFilter" onchange="applyFilters()">
+                            <option value="">All Sports</option>
+                            <option value="baseball">Baseball</option>
+                            <option value="basketball">Basketball</option>
+                            <option value="football">Football</option>
+                            <option value="hockey">Hockey</option>
+                            <option value="soccer">Soccer</option>
+                            <option value="other">Other</option>
+                        </select>
+                    </div>
+                    <div class="col-md-5 d-flex gap-1 flex-wrap">
+                        <button class="btn btn-outline-secondary btn-status active" data-status="" onclick="setStatus(this)">All</button>
+                        <button class="btn btn-outline-success btn-status" data-status="OWNED" onclick="setStatus(this)">Owned</button>
+                        <button class="btn btn-outline-danger btn-status" data-status="SOLD" onclick="setStatus(this)">Sold</button>
+                        <button class="btn btn-outline-warning btn-status" data-status="TRADED" onclick="setStatus(this)">Traded</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Table -->
+            <div class="table-wrapper">
+                <table class="table table-hover table-bordered align-middle" id="inventoryTable">
+                    <thead>
+                        <tr>
+                            <th style="width:50px"></th>
+                            <th onclick="sortBy('player_name')">Player</th>
+                            <th onclick="sortBy('year')">Year</th>
+                            <th onclick="sortBy('set_name')">Set</th>
+                            <th onclick="sortBy('card_number')">Card #</th>
+                            <th>Variant</th>
+                            <th>Type</th>
+                            <th onclick="sortBy('grade')">Grade</th>
+                            <th onclick="sortBy('cost_basis')">Cost</th>
+                            <th>Comps (L / Avg / H / Paid)</th>
+                            <th onclick="sortBy('unrealized_gain_avg')">Gain/Loss</th>
+                            <th onclick="sortBy('status')">Status</th>
+                            <th onclick="sortBy('acquisition_date')">Acquired</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody id="tableBody">
+                        <tr><td colspan="13" class="text-center text-muted py-4">Loading…</td></tr>
+                    </tbody>
+                </table>
+            </div>
+            <div id="noResults"><h5>No cards match your filters.</h5></div>
+            <div class="text-muted small" id="rowCount"></div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    let allRows = [];
+    let sortCol = 'player_name';
+    let sortDir = 1;
+    let activeStatus = '';
+
+    const fmt$ = v => v == null ? '—' : '$' + parseFloat(v).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+
+    // Hierarchy: avg → low → high → item_price → cost_basis
+    function effectiveValue(r) {
+        if (r.comp_avg   != null) return { val: parseFloat(r.comp_avg),   src: 'avg' };
+        if (r.comp_low   != null) return { val: parseFloat(r.comp_low),   src: 'low' };
+        if (r.comp_high  != null) return { val: parseFloat(r.comp_high),  src: 'high' };
+        if (r.item_price != null) return { val: parseFloat(r.item_price), src: 'paid' };
+        if (r.cost_basis != null) return { val: parseFloat(r.cost_basis), src: 'cost' };
+        return null;
+    }
+
+    const fmtGain = v => {
+        if (v == null) return '<span class="gain-nil">—</span>';
+        const n = parseFloat(v);
+        const s = '$' + Math.abs(n).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+        return n >= 0
+            ? `<span class="gain-pos">+${s}</span>`
+            : `<span class="gain-neg">-${s}</span>`;
+    };
+
+    function typeBadges(row) {
+        const b = [];
+        if (row.is_rookie) b.push('<span class="badge badge-rc me-1">RC</span>');
+        if (row.is_auto)   b.push('<span class="badge badge-auto me-1">Auto</span>');
+        if (row.is_patch)  b.push('<span class="badge badge-patch me-1">Patch</span>');
+        else if (row.is_relic) b.push('<span class="badge badge-relic me-1">Relic</span>');
+        if (row.is_numbered && row.print_run) b.push(`<span class="badge badge-num">/${row.print_run}</span>`);
+        return b.join('') || '<span class="text-muted">Base</span>';
+    }
+
+    function gradeCell(row) {
+        if (!row.is_graded) return '<span class="text-muted">Raw</span>';
+        const q = row.grade_qualifier ? ` (${row.grade_qualifier})` : '';
+        return `<strong>${row.grading_company}</strong> ${row.grade}${q}`;
+    }
+
+    function gainCell(r) {
+        const ev = effectiveValue(r);
+        if (!ev || r.cost_basis == null) return '<span class="gain-nil">—</span>';
+        const gain = ev.val - parseFloat(r.cost_basis);
+        const srcLabel = { avg: 'comp avg', low: 'comp low', high: 'comp high', paid: 'card price', cost: 'cost basis' }[ev.src];
+        const s = '$' + Math.abs(gain).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+        const cls = gain >= 0 ? 'gain-pos' : 'gain-neg';
+        const sign = gain >= 0 ? '+' : '-';
+        return `<span class="${cls}" title="Based on ${srcLabel}">${sign}${s}</span>`;
+    }
+
+    function costBreakdown(r) {
+        if (!r.item_price && !r.tax_paid && !r.shipping_paid) return 'No breakdown recorded';
+        const parts = [];
+        if (r.item_price)    parts.push(`Card: ${fmt$(r.item_price)}`);
+        if (r.tax_paid)      parts.push(`Tax: ${fmt$(r.tax_paid)}`);
+        if (r.shipping_paid) parts.push(`Shipping: ${fmt$(r.shipping_paid)}`);
+        return parts.join(' | ');
+    }
+
+    function variantCell(row) {
+        const parts = [];
+        if (row.parallel_name) parts.push(row.parallel_name);
+        if (row.insert_name)   parts.push(`<em>${row.insert_name}</em>`);
+        return parts.join('<br>') || '<span class="text-muted">—</span>';
+    }
+
+    function renderTable(rows) {
+        const tbody = document.getElementById('tableBody');
+        if (rows.length === 0) {
+            tbody.innerHTML = '';
+            document.getElementById('noResults').style.display = 'block';
+            document.getElementById('rowCount').textContent = '';
+            return;
+        }
+        document.getElementById('noResults').style.display = 'none';
+        document.getElementById('rowCount').textContent = `Showing ${rows.length} card${rows.length !== 1 ? 's' : ''}`;
+
+        tbody.innerHTML = rows.map(r => `
+            <tr>
+                <td class="text-center p-1">
+                    ${r.front_image
+                        ? `<a href="/photos/${r.front_image}" target="_blank">
+                             <img src="/photos/${r.front_image}" width="36"
+                                  style="border-radius:4px;object-fit:cover;height:50px;" alt="card">
+                           </a>`
+                        : '<span class="text-muted" style="font-size:1.2rem">📷</span>'}
+                </td>
+                <td><strong>${r.player_name}</strong>${r.team ? `<br><small class="text-muted">${r.team}</small>` : ''}</td>
+                <td>${r.year}</td>
+                <td>${r.manufacturer}<br><small class="text-muted">${r.set_name}</small></td>
+                <td>${r.card_number ?? '—'}</td>
+                <td>${variantCell(r)}</td>
+                <td>${typeBadges(r)}</td>
+                <td>${gradeCell(r)}</td>
+                <td title="${costBreakdown(r)}">${fmt$(r.cost_basis)}</td>
+                <td style="white-space:nowrap">${fmt$(r.comp_low)} / ${fmt$(r.comp_avg)} / ${fmt$(r.comp_high)} / ${fmt$(r.item_price ?? r.cost_basis)}</td>
+                <td>${gainCell(r)}</td>
+                <td><span class="status-${r.status}">${r.status}</span></td>
+                <td>${r.acquisition_date ?? '—'}</td>
+                <td><a href="edit.html?id=${r.inventory_id}" class="btn btn-sm btn-outline-secondary">Edit</a></td>
+            </tr>
+        `).join('');
+    }
+
+    function updateStats(rows) {
+        const owned = rows.filter(r => r.status === 'OWNED');
+        const totalCost  = owned.reduce((s, r) => s + (parseFloat(r.cost_basis) || 0), 0);
+        const totalValue = owned.reduce((s, r) => {
+            const ev = effectiveValue(r);
+            return s + (ev ? ev.val : 0);
+        }, 0);
+        const totalGain = totalValue - totalCost;
+        document.getElementById('statCards').textContent = owned.length;
+        document.getElementById('statCost').textContent  = fmt$(totalCost);
+        document.getElementById('statValue').textContent = fmt$(totalValue);
+        const gEl = document.getElementById('statGain');
+        gEl.textContent = (totalGain >= 0 ? '+' : '') + fmt$(Math.abs(totalGain).toFixed(2));
+        gEl.style.color = totalGain >= 0 ? '#28a745' : '#dc3545';
+    }
+
+    function applyFilters() {
+        const q      = document.getElementById('searchBox').value.toLowerCase();
+        const sport  = document.getElementById('sportFilter').value.toLowerCase();
+        let rows = allRows.filter(r => {
+            if (activeStatus && r.status !== activeStatus) return false;
+            if (sport && r.sport !== sport) return false;
+            if (q) {
+                const haystack = `${r.player_name} ${r.set_name} ${r.manufacturer} ${r.year} ${r.parallel_name ?? ''} ${r.insert_name ?? ''}`.toLowerCase();
+                if (!haystack.includes(q)) return false;
+            }
+            return true;
+        });
+        rows = [...rows].sort((a, b) => {
+            const av = a[sortCol] ?? '';
+            const bv = b[sortCol] ?? '';
+            return av < bv ? -sortDir : av > bv ? sortDir : 0;
+        });
+        renderTable(rows);
+        // update sort indicators
+        document.querySelectorAll('thead th').forEach(th => th.classList.remove('sort-asc', 'sort-desc'));
+        const ths = document.querySelectorAll('thead th');
+        const cols = [null,'player_name','year','set_name','card_number',null,null,'grade','cost_basis',null,'unrealized_gain_avg','status','acquisition_date'];
+        const idx = cols.indexOf(sortCol);
+        if (idx >= 0) ths[idx].classList.add(sortDir === 1 ? 'sort-asc' : 'sort-desc');
+    }
+
+    function sortBy(col) {
+        if (sortCol === col) sortDir *= -1;
+        else { sortCol = col; sortDir = 1; }
+        applyFilters();
+    }
+
+    function setStatus(btn) {
+        activeStatus = btn.dataset.status;
+        document.querySelectorAll('.btn-status').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        applyFilters();
+    }
+
+    async function loadInventory() {
+        try {
+            const { getInventory } = await import('./js/db.js');
+            allRows = await getInventory();
+            updateStats(allRows);
+            applyFilters();
+        } catch (e) {
+            document.getElementById('tableBody').innerHTML =
+                `<tr><td colspan="12" class="text-center text-danger py-4">Failed to load inventory: ${e.message}</td></tr>`;
+        }
+    }
+
+    loadInventory();
+</script>
+</body>
+</html>

@@ -1,0 +1,10 @@
+{
+  "appId": "com.personal.cardinventory",
+  "appName": "Card Inventory",
+  "webDir": "src",
+  "plugins": {
+    "CapacitorSQLite": {
+      "iosDatabaseLocation": "Library/LocalDatabase"
+    }
+  }
+}
