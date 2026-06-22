@@ -9,7 +9,6 @@ Built with:     python3 -m PyInstaller ../card_inventory.spec --noconfirm
 import sys
 import os
 import signal
-import socket
 import subprocess
 import threading
 import time
@@ -24,7 +23,7 @@ PORT = 8000
 
 
 def _kill_port(port):
-    """Kill any process currently holding the given port."""
+    """Kill any process currently holding the given port (SIGKILL for immediate effect)."""
     try:
         result = subprocess.run(
             ['lsof', '-ti', f':{port}'],
@@ -33,18 +32,28 @@ def _kill_port(port):
         for pid in result.stdout.strip().split('\n'):
             pid = pid.strip()
             if pid:
-                os.kill(int(pid), signal.SIGTERM)
-        time.sleep(0.5)
+                try:
+                    os.kill(int(pid), signal.SIGKILL)
+                except ProcessLookupError:
+                    pass
+        time.sleep(0.3)
     except Exception:
         pass
 
 
 def _wait_and_open():
-    time.sleep(2.0)
+    time.sleep(1.5)
     webbrowser.open(f"http://localhost:{PORT}/form")
 
 
 if __name__ == '__main__':
+    # Quit cleanly when macOS sends SIGTERM (Dock → Quit) or SIGINT (Ctrl-C)
+    def _handle_quit(signum, frame):
+        os._exit(0)
+
+    signal.signal(signal.SIGTERM, _handle_quit)
+    signal.signal(signal.SIGINT,  _handle_quit)
+
     os.environ['CARD_WATCHDOG'] = '1'
     from lib.db import init_db
     from forms import app

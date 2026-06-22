@@ -44,8 +44,8 @@ def ping():
 def _start_watchdog():
     def _watch():
         while True:
-            time.sleep(10)
-            if time.time() - _last_ping > 20:
+            time.sleep(4)
+            if time.time() - _last_ping > 8:
                 os._exit(0)
     threading.Thread(target=_watch, daemon=True).start()
 
