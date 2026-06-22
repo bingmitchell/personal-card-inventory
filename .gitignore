@@ -7,3 +7,8 @@ __pycache__/
 scripts/lib/__pycache__/
 dist/
 build/
+
+# iOS Capacitor
+ios-app/node_modules/
+ios-app/ios/
+ios-app/android/
