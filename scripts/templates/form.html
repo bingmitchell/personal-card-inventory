@@ -137,9 +137,6 @@
                             View Collection
                         </a>
                     </li>
-                    <li class="nav-item ms-auto d-flex align-items-center pe-1">
-                        <button onclick="quitApp()" class="btn btn-sm btn-outline-light opacity-75">Quit</button>
-                    </li>
                 </ul>
             </div>
             <div class="card-body p-4">
@@ -774,7 +771,9 @@
         }
 
         // Keep server alive; shuts down ~8 seconds after all tabs close
-        setInterval(() => fetch('/api/ping', {method:'POST', keepalive:true}).catch(()=>{}), 4000);
+        const _ping = () => fetch('/api/ping', {method:'POST', keepalive:true}).catch(()=>{});
+        _ping();
+        setInterval(_ping, 4000);
     </script>
 </body>
 </html>

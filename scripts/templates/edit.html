@@ -43,9 +43,6 @@
                 <li class="nav-item"><a class="nav-link" href="/form">Add Card</a></li>
                 <li class="nav-item"><a class="nav-link" href="/inventory">View Collection</a></li>
                 <li class="nav-item"><a class="nav-link active" href="#">Edit Entry</a></li>
-                <li class="nav-item ms-auto d-flex align-items-center pe-1">
-                    <button onclick="quitApp()" class="btn btn-sm btn-outline-light opacity-75">Quit</button>
-                </li>
             </ul>
         </div>
 
@@ -521,7 +518,9 @@
         document.body.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100vh;font-family:sans-serif;color:#666"><p>Card Inventory has stopped. You can close this tab.</p></div>';
     }
 
-    setInterval(() => fetch('/api/ping', {method:'POST', keepalive:true}).catch(()=>{}), 4000);
+    const _ping = () => fetch('/api/ping', {method:'POST', keepalive:true}).catch(()=>{});
+    _ping();
+    setInterval(_ping, 4000);
 </script>
 </body>
 </html>

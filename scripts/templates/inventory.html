@@ -106,9 +106,6 @@
                 <li class="nav-item">
                     <a class="nav-link active" href="/inventory">View Collection</a>
                 </li>
-                <li class="nav-item ms-auto d-flex align-items-center pe-1">
-                    <button onclick="quitApp()" class="btn btn-sm btn-outline-light opacity-75">Quit</button>
-                </li>
             </ul>
         </div>
 
@@ -178,20 +175,21 @@
                             <th onclick="sortBy('player_name')">Player</th>
                             <th onclick="sortBy('year')">Year</th>
                             <th onclick="sortBy('set_name')">Set</th>
-                            <th onclick="sortBy('card_number')">Card #</th>
                             <th>Variant</th>
-                            <th>Type</th>
+                            <th onclick="sortBy('is_base')">Type</th>
+                            <th onclick="sortBy('is_rookie')" title="Rookie Card">RC</th>
+                            <th onclick="sortBy('is_auto')" title="Autograph">Auto</th>
+                            <th onclick="sortBy('is_relic')" title="Memorabilia (Relic/Patch)">Mem</th>
                             <th onclick="sortBy('grade')">Grade</th>
                             <th onclick="sortBy('cost_basis')">Cost</th>
                             <th>Comps (L / Avg / H / Paid)</th>
                             <th onclick="sortBy('unrealized_gain_avg')">Gain/Loss</th>
-                            <th onclick="sortBy('status')">Status</th>
                             <th onclick="sortBy('acquisition_date')">Acquired</th>
                             <th></th>
                         </tr>
                     </thead>
                     <tbody id="tableBody">
-                        <tr><td colspan="13" class="text-center text-muted py-4">Loading…</td></tr>
+                        <tr><td colspan="14" class="text-center text-muted py-4">Loading…</td></tr>
                     </tbody>
                 </table>
             </div>
@@ -229,14 +227,15 @@
             : `<span class="gain-neg">-${s}</span>`;
     };
 
-    function typeBadges(row) {
-        const b = [];
-        if (row.is_rookie) b.push('<span class="badge badge-rc me-1">RC</span>');
-        if (row.is_auto)   b.push('<span class="badge badge-auto me-1">Auto</span>');
-        if (row.is_patch)  b.push('<span class="badge badge-patch me-1">Patch</span>');
-        else if (row.is_relic) b.push('<span class="badge badge-relic me-1">Relic</span>');
-        if (row.is_numbered && row.print_run) b.push(`<span class="badge badge-num">/${row.print_run}</span>`);
-        return b.join('') || '<span class="text-muted">Base</span>';
+    const CHECK = '<span style="color:#28a745;font-weight:700">✓</span>';
+
+    function typeCell(row) {
+        const hasInsert   = !!row.insert_name;
+        const hasParallel = !!row.parallel_name;
+        if (hasInsert && hasParallel) return '<span style="color:#764ba2;font-weight:600">Insert Parallel</span>';
+        if (hasInsert)                return '<span style="color:#fd7e14;font-weight:600">Insert</span>';
+        if (hasParallel)              return '<span style="color:#667eea;font-weight:600">Parallel</span>';
+        return '<span class="text-muted">Base</span>';
     }
 
     function gradeCell(row) {
@@ -269,6 +268,7 @@
         const parts = [];
         if (row.parallel_name) parts.push(row.parallel_name);
         if (row.insert_name)   parts.push(`<em>${row.insert_name}</em>`);
+        if (row.is_numbered && row.print_run) parts.push(`<span class="badge badge-num">/${row.print_run}</span>`);
         return parts.join('<br>') || '<span class="text-muted">—</span>';
     }
 
@@ -296,14 +296,15 @@
                 <td><strong>${r.player_name}</strong>${r.team ? `<br><small class="text-muted">${r.team}</small>` : ''}</td>
                 <td>${r.year}</td>
                 <td>${r.manufacturer}<br><small class="text-muted">${r.set_name}</small></td>
-                <td>${r.card_number ?? '—'}</td>
                 <td>${variantCell(r)}</td>
-                <td>${typeBadges(r)}</td>
+                <td>${typeCell(r)}</td>
+                <td class="text-center">${r.is_rookie ? CHECK : '—'}</td>
+                <td class="text-center">${r.is_auto   ? CHECK : '—'}</td>
+                <td class="text-center" title="${r.is_patch ? 'Patch' : r.is_relic ? 'Relic' : ''}">${(r.is_relic || r.is_patch) ? CHECK : '—'}</td>
                 <td>${gradeCell(r)}</td>
                 <td title="${costBreakdown(r)}">${fmt$(r.cost_basis)}</td>
                 <td style="white-space:nowrap">${fmt$(r.comp_low)} / ${fmt$(r.comp_avg)} / ${fmt$(r.comp_high)} / ${fmt$(r.item_price ?? r.cost_basis)}</td>
                 <td>${gainCell(r)}</td>
-                <td><span class="status-${r.status}">${r.status}</span></td>
                 <td>${r.acquisition_date ?? '—'}</td>
                 <td><a href="/edit/${r.inventory_id}" class="btn btn-sm btn-outline-secondary">Edit</a></td>
             </tr>
@@ -385,7 +386,9 @@
         document.body.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100vh;font-family:sans-serif;color:#666"><p>Card Inventory has stopped. You can close this tab.</p></div>';
     }
 
-    setInterval(() => fetch('/api/ping', {method:'POST', keepalive:true}).catch(()=>{}), 4000);
+    const _ping = () => fetch('/api/ping', {method:'POST', keepalive:true}).catch(()=>{});
+    _ping();
+    setInterval(_ping, 4000);
 </script>
 </body>
 </html>
