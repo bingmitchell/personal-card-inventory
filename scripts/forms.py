@@ -82,6 +82,9 @@ def api_add_card():
             return str(val).strip() if val is not None else ''
 
         # Card catalog fields
+        _insert_name  = _s(data.get('insert_name'))  or None
+        _parallel_name = _s(data.get('parallel_name')) or None
+
         card_data = {
             'sport': _s(data.get('sport')),
             'year': _s(data.get('year')),
@@ -90,8 +93,9 @@ def api_add_card():
             'player_name': _s(data.get('player_name')),
             'card_number': _s(data.get('card_number')) or None,
             'team': _s(data.get('team')) or None,
-            'parallel_name': _s(data.get('parallel_name')) or None,
-            'insert_name': _s(data.get('insert_name')) or None,
+            'insert_name': _insert_name,
+            'parallel_name': _parallel_name,
+            'is_base': (_insert_name is None) and (_parallel_name is None),
             'is_auto': data.get('is_auto', False),
             'is_relic': data.get('is_relic', False),
             'is_patch': data.get('is_patch', False),
@@ -290,6 +294,7 @@ def update_inventory_entry(inventory_id):
             'team':         _s(data.get('team')) or None,
             'insert_name':  _s(data.get('insert_name')) or None,
             'parallel_name': _s(data.get('parallel_name')) or None,
+            'is_base':      (not (_s(data.get('insert_name')) or '')) and (not (_s(data.get('parallel_name')) or '')),
             'is_auto':      bool(data.get('is_auto', False)),
             'is_relic':     bool(data.get('is_relic', False)),
             'is_patch':     bool(data.get('is_patch', False)),
