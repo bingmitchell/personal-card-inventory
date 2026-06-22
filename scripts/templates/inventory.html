@@ -385,7 +385,7 @@
         document.body.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100vh;font-family:sans-serif;color:#666"><p>Card Inventory has stopped. You can close this tab.</p></div>';
     }
 
-    setInterval(() => fetch('/api/ping', {method:'POST', keepalive:true}).catch(()=>{}), 8000);
+    setInterval(() => fetch('/api/ping', {method:'POST', keepalive:true}).catch(()=>{}), 4000);
 </script>
 </body>
 </html>
