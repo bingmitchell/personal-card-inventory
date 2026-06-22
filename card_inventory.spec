@@ -56,6 +56,6 @@ coll = COLLECT(
 app = BUNDLE(
     coll,
     name='Card Inventory.app',
-    icon=None,
+    icon='assets/CardInventory.icns',
     bundle_identifier='com.personal.card-inventory',
 )
